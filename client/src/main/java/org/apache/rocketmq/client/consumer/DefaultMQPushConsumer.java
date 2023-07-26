@@ -61,6 +61,7 @@ import org.apache.rocketmq.logging.org.slf4j.LoggerFactory;
  * <p>
  * <strong>Thread Safety:</strong> After initialization, the instance can be regarded as thread-safe.
  * </p>
+ * 推模式
  */
 public class DefaultMQPushConsumer extends ClientConfig implements MQPushConsumer {
 
@@ -72,11 +73,13 @@ public class DefaultMQPushConsumer extends ClientConfig implements MQPushConsume
     protected final transient DefaultMQPushConsumerImpl defaultMQPushConsumerImpl;
 
     /**
+     * 相同角色的使用者需要具有完全相同的订阅和使用者组，才能正确实现负载均衡。它是必需的，并且需要全局唯一。
      * Consumers of the same role is required to have exactly same subscriptions and consumerGroup to correctly achieve
      * load balance. It's required and needs to be globally unique.
      * </p>
      *
      * See <a href="https://rocketmq.apache.org/docs/introduction/02concepts">here</a> for further discussion.
+     * 消费者组, 如果属于同一个消费者组的消息, 如果同一个消费者组中有多个消费者, 只会给其中一个消费者推送消息
      */
     private String consumerGroup;
 
@@ -91,6 +94,7 @@ public class DefaultMQPushConsumer extends ClientConfig implements MQPushConsume
      * </p>
      *
      * This field defaults to clustering.
+     * 消息模式: 默认集群
      */
     private MessageModel messageModel = MessageModel.CLUSTERING;
 
@@ -147,26 +151,31 @@ public class DefaultMQPushConsumer extends ClientConfig implements MQPushConsume
 
     /**
      * Message listener
+     * 消息监听器
      */
     private MessageListener messageListener;
 
     /**
      * Offset Storage
+     * 消息偏移 存储
      */
     private OffsetStore offsetStore;
 
     /**
      * Minimum consumer thread number
+     * 最小消费者线程数
      */
     private int consumeThreadMin = 20;
 
     /**
      * Max consumer thread number
+     * 最大消费者线程数
      */
     private int consumeThreadMax = 20;
 
     /**
      * Threshold for dynamic adjustment of the number of thread pool
+     * 动态调整线程池数的阈值
      */
     private long adjustThreadPoolNumsThreshold = 100000;
 
@@ -755,6 +764,10 @@ public class DefaultMQPushConsumer extends ClientConfig implements MQPushConsume
         }
     }
 
+    /**
+     * 注册消息监听器
+     * @param messageListener
+     */
     @Override
     @Deprecated
     public void registerMessageListener(MessageListener messageListener) {
@@ -763,6 +776,7 @@ public class DefaultMQPushConsumer extends ClientConfig implements MQPushConsume
     }
 
     /**
+     * 注册要在消息到达时执行的回调以进行并发消费。
      * Register a callback to execute on message arrival for concurrent consuming.
      *
      * @param messageListener message handling callback.
@@ -774,6 +788,7 @@ public class DefaultMQPushConsumer extends ClientConfig implements MQPushConsume
     }
 
     /**
+     * 注册回调以在消息到达时执行，以便有序使用。
      * Register a callback to execute on message arrival for orderly consuming.
      *
      * @param messageListener message handling callback.
@@ -785,6 +800,7 @@ public class DefaultMQPushConsumer extends ClientConfig implements MQPushConsume
     }
 
     /**
+     * 为当前消费者指定订阅topic
      * Subscribe a topic to consuming subscription.
      *
      * @param topic topic to subscribe.

@@ -40,6 +40,9 @@ import org.apache.rocketmq.logging.org.slf4j.LoggerFactory;
 import org.apache.rocketmq.srvutil.ServerUtil;
 import org.apache.rocketmq.srvutil.ShutdownHookThread;
 
+/**
+ * 类似于注册中心
+ */
 public class NamesrvStartup {
 
     private final static Logger log = LoggerFactory.getLogger(LoggerName.NAMESRV_LOGGER_NAME);
@@ -57,7 +60,9 @@ public class NamesrvStartup {
 
     public static NamesrvController main0(String[] args) {
         try {
+            // 解析命令行和配置文件
             parseCommandlineAndConfigFile(args);
+            // 创建且启动Namesrv
             NamesrvController controller = createAndStartNamesrvController();
             return controller;
         } catch (Throwable e) {
@@ -80,10 +85,16 @@ public class NamesrvStartup {
         return null;
     }
 
+    /**
+     * 解析命令行和配置文件
+     * @param args
+     * @throws Exception
+     */
     public static void parseCommandlineAndConfigFile(String[] args) throws Exception {
         System.setProperty(RemotingCommand.REMOTING_VERSION_KEY, Integer.toString(MQVersion.CURRENT_VERSION));
 
         Options options = ServerUtil.buildCommandlineOptions(new Options());
+        // 解析命令行
         CommandLine commandLine = ServerUtil.parseCmdLine("mqnamesrv", args, buildCommandlineOptions(options), new DefaultParser());
         if (null == commandLine) {
             System.exit(-1);
@@ -94,6 +105,7 @@ public class NamesrvStartup {
         nettyServerConfig = new NettyServerConfig();
         nettyClientConfig = new NettyClientConfig();
         nettyServerConfig.setListenPort(9876);
+        // 命令行是否包含 c
         if (commandLine.hasOption('c')) {
             String file = commandLine.getOptionValue('c');
             if (file != null) {
@@ -222,11 +234,17 @@ public class NamesrvStartup {
         controllerManager.shutdown();
     }
 
+    /**
+     * 构建命令行选项
+     * @param options
+     * @return
+     */
     public static Options buildCommandlineOptions(final Options options) {
+        // 配置文件
         Option opt = new Option("c", "configFile", true, "Name server config properties file");
         opt.setRequired(false);
         options.addOption(opt);
-
+        // 打印配置项
         opt = new Option("p", "printConfigItem", false, "Print all config items");
         opt.setRequired(false);
         options.addOption(opt);

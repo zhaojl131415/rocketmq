@@ -48,6 +48,7 @@ import org.apache.rocketmq.logging.org.slf4j.Logger;
 import org.apache.rocketmq.logging.org.slf4j.LoggerFactory;
 
 /**
+ * 默认的消息队列生产者
  * This class is the entry point for applications intending to send messages. </p>
  *
  * It's fine to tune fields which exposes getter/setter methods, but keep in mind, all of them should work well out of
@@ -58,6 +59,12 @@ import org.apache.rocketmq.logging.org.slf4j.LoggerFactory;
  *
  * <p> <strong>Thread Safety:</strong> After configuring and starting process, this class can be regarded as thread-safe
  * and used among multiple threads context. </p>
+ *
+ * 此类是打算发送消息的应用程序的入口点。
+ * 可以调整公开 getter/setter 方法的字段，但请记住，在大多数情况下，所有这些字段都应该开箱即用。
+ * 此类聚合了将 send 消息传递到代理的各种方法。他们每个人都有优点和缺点;在实际编码之前，您最好了解它们的优点和缺点。
+ *
+ * 线程安全： 配置并启动进程后，可以将此类视为线程安全的，并在多个线程上下文中使用。
  */
 public class DefaultMQProducer extends ClientConfig implements MQProducer {
 

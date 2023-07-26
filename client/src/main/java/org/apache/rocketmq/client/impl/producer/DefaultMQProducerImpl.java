@@ -489,6 +489,7 @@ public class DefaultMQProducerImpl implements MQProducerInner {
 
     /**
      * DEFAULT ASYNC -------------------------------------------------------
+     * 异步发送
      */
     public void send(Message msg,
         SendCallback sendCallback) throws MQClientException, RemotingException, InterruptedException {
@@ -1036,6 +1037,7 @@ public class DefaultMQProducerImpl implements MQProducerInner {
 
     /**
      * DEFAULT ONEWAY -------------------------------------------------------
+     * 发送单向消息
      */
     public void sendOneway(Message msg) throws MQClientException, RemotingException, InterruptedException {
         try {
@@ -1047,6 +1049,7 @@ public class DefaultMQProducerImpl implements MQProducerInner {
 
     /**
      * KERNEL SYNC -------------------------------------------------------
+     * 同步发送
      */
     public SendResult send(Message msg, MessageQueue mq)
         throws MQClientException, RemotingException, MQBrokerException, InterruptedException {

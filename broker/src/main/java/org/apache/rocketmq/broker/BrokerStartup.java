@@ -85,7 +85,9 @@ public class BrokerStartup {
         final BrokerConfig brokerConfig = new BrokerConfig();
         final NettyServerConfig nettyServerConfig = new NettyServerConfig();
         final NettyClientConfig nettyClientConfig = new NettyClientConfig();
+        // 封装消息存储的配置信息
         final MessageStoreConfig messageStoreConfig = new MessageStoreConfig();
+        // 设置netty服务器的监听端口10911
         nettyServerConfig.setListenPort(10911);
         messageStoreConfig.setHaListenPort(0);
 
@@ -97,6 +99,7 @@ public class BrokerStartup {
         }
 
         Properties properties = null;
+        // 判断命令行参数是否包含-c,解析并加载配置
         if (commandLine.hasOption('c')) {
             String file = commandLine.getOptionValue('c');
             if (file != null) {
@@ -113,15 +116,16 @@ public class BrokerStartup {
             MixAll.properties2Object(properties, nettyClientConfig);
             MixAll.properties2Object(properties, messageStoreConfig);
         }
-
+        // 将命令行参数封装到brokerConfig
         MixAll.properties2Object(ServerUtil.commandLine2Properties(commandLine), brokerConfig);
+        // 验证Rocketmq的环境变量是否存在，不存在退出
         if (null == brokerConfig.getRocketmqHome()) {
             System.out.printf("Please set the %s variable in your environment " +
                 "to match the location of the RocketMQ installation", MixAll.ROCKETMQ_HOME_ENV);
             System.exit(-2);
         }
 
-        // Validate namesrvAddr
+        // Validate namesrvAddr 获取getNamesrvAddr 获取Namesrv地址
         String namesrvAddr = brokerConfig.getNamesrvAddr();
         if (StringUtils.isNotBlank(namesrvAddr)) {
             try {
@@ -143,6 +147,7 @@ public class BrokerStartup {
 
         // Set broker role according to ha config
         if (!brokerConfig.isEnableControllerMode()) {
+            // 判断Broker的角色BrokerRole，setBrokerId 为0L.   < 0退出
             switch (messageStoreConfig.getBrokerRole()) {
                 case ASYNC_MASTER:
                 case SYNC_MASTER:
@@ -167,7 +172,8 @@ public class BrokerStartup {
             System.out.printf("The config enableControllerMode and enableDLegerCommitLog cannot both be true.%n");
             System.exit(-4);
         }
-
+        //10911  用于与客户端的通信
+        //10912  用于与Slave的通信
         if (messageStoreConfig.getHaListenPort() <= 0) {
             messageStoreConfig.setHaListenPort(nettyServerConfig.getListenPort() + 1);
         }
@@ -181,7 +187,7 @@ public class BrokerStartup {
         if (brokerConfig.isIsolateLogEnable() && messageStoreConfig.isEnableDLegerCommitLog()) {
             System.setProperty("brokerLogDir", brokerConfig.getBrokerName() + "_" + messageStoreConfig.getdLegerSelfId());
         }
-
+        //判断命令行是否包含-p ，包含打印信息,打印完退出
         if (commandLine.hasOption('p')) {
             Logger console = LoggerFactory.getLogger(LoggerName.BROKER_CONSOLE_NAME);
             MixAll.printObjectProperties(console, brokerConfig);
@@ -189,7 +195,7 @@ public class BrokerStartup {
             MixAll.printObjectProperties(console, nettyClientConfig);
             MixAll.printObjectProperties(console, messageStoreConfig);
             System.exit(0);
-        } else if (commandLine.hasOption('m')) {
+        } else if (commandLine.hasOption('m')) { //判断命令行是否包含-m ，包含打印重要信息，打印完退出
             Logger console = LoggerFactory.getLogger(LoggerName.BROKER_CONSOLE_NAME);
             MixAll.printObjectProperties(console, brokerConfig, true);
             MixAll.printObjectProperties(console, nettyServerConfig, true);
@@ -203,11 +209,11 @@ public class BrokerStartup {
         MixAll.printObjectProperties(log, nettyServerConfig);
         MixAll.printObjectProperties(log, nettyClientConfig);
         MixAll.printObjectProperties(log, messageStoreConfig);
-
+        //初始化BrokerController
         final BrokerController controller = new BrokerController(
             brokerConfig, nettyServerConfig, nettyClientConfig, messageStoreConfig);
 
-        // Remember all configs to prevent discard
+        // Remember all configs to prevent discard //将BrokerController的配置写入类变量里。
         controller.getConfiguration().registerConfig(properties);
 
         return controller;
@@ -237,6 +243,7 @@ public class BrokerStartup {
     public static BrokerController createBrokerController(String[] args) {
         try {
             BrokerController controller = buildBrokerController(args);
+            //初始化BrokerController
             boolean initResult = controller.initialize();
             if (!initResult) {
                 controller.shutdown();
