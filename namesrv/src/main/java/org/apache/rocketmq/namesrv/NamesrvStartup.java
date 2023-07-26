@@ -42,17 +42,24 @@ import org.apache.rocketmq.srvutil.ShutdownHookThread;
 
 /**
  * 类似于注册中心
+ * level:sss NameServer核心启动类
  */
 public class NamesrvStartup {
 
     private final static Logger log = LoggerFactory.getLogger(LoggerName.NAMESRV_LOGGER_NAME);
     private final static Logger logConsole = LoggerFactory.getLogger(LoggerName.NAMESRV_CONSOLE_LOGGER_NAME);
     private static Properties properties = null;
+    // NameServer配置
     private static NamesrvConfig namesrvConfig = null;
+    // NettyServer配置
     private static NettyServerConfig nettyServerConfig = null;
     private static NettyClientConfig nettyClientConfig = null;
     private static ControllerConfig controllerConfig = null;
 
+    /**
+     * level:ss NameServer核心启动类主方法
+     * @param args
+     */
     public static void main(String[] args) {
         main0(args);
         controllerManagerMain();
@@ -62,7 +69,7 @@ public class NamesrvStartup {
         try {
             // 解析命令行和配置文件
             parseCommandlineAndConfigFile(args);
-            // 创建且启动Namesrv
+            // level:ss 创建且启动NameServer控制器
             NamesrvController controller = createAndStartNamesrvController();
             return controller;
         } catch (Throwable e) {
@@ -100,15 +107,18 @@ public class NamesrvStartup {
             System.exit(-1);
             return;
         }
-
+        // level:a NameServer的两个核心配置
         namesrvConfig = new NamesrvConfig();
         nettyServerConfig = new NettyServerConfig();
         nettyClientConfig = new NettyClientConfig();
+        // 默认直接指定9876端口
         nettyServerConfig.setListenPort(9876);
         // 命令行是否包含 c
         if (commandLine.hasOption('c')) {
+            // 获取命令行-c的值: 为指定的配置文件地址
             String file = commandLine.getOptionValue('c');
             if (file != null) {
+                // 如果配置文件不为空, 加载配置文件
                 InputStream in = new BufferedInputStream(Files.newInputStream(Paths.get(file)));
                 properties = new Properties();
                 properties.load(in);
@@ -119,6 +129,7 @@ public class NamesrvStartup {
                     controllerConfig = new ControllerConfig();
                     MixAll.properties2Object(properties, controllerConfig);
                 }
+                // 指定配置文件路径
                 namesrvConfig.setConfigStorePath(file);
 
                 System.out.printf("load config properties file OK, %s%n", file);
@@ -127,6 +138,7 @@ public class NamesrvStartup {
         }
 
         MixAll.properties2Object(ServerUtil.commandLine2Properties(commandLine), namesrvConfig);
+        // -p 查看配置信息, 打印完后退出.
         if (commandLine.hasOption('p')) {
             MixAll.printObjectProperties(logConsole, namesrvConfig);
             MixAll.printObjectProperties(logConsole, nettyServerConfig);
@@ -136,7 +148,7 @@ public class NamesrvStartup {
             }
             System.exit(0);
         }
-
+        // 获取环境变量中配置的ROCKETMQ_HOME
         if (null == namesrvConfig.getRocketmqHome()) {
             System.out.printf("Please set the %s variable in your environment to match the location of the RocketMQ installation%n", MixAll.ROCKETMQ_HOME_ENV);
             System.exit(-2);
@@ -146,10 +158,17 @@ public class NamesrvStartup {
 
     }
 
+    /**
+     * level:ss 创建并启动NameServer控制器
+     * @return
+     * @throws Exception
+     */
     public static NamesrvController createAndStartNamesrvController() throws Exception {
-
+        // 创建NameServer控制器
         NamesrvController controller = createNamesrvController();
+        // 启动NameServer控制器
         start(controller);
+        // 获取控制器Netty服务端配置
         NettyServerConfig serverConfig = controller.getNettyServerConfig();
         String tip = String.format("The Name Server boot success. serializeType=%s, address %s:%d", RemotingCommand.getSerializeTypeConfigInThisServer(), serverConfig.getBindAddress(), serverConfig.getListenPort());
         log.info(tip);
@@ -170,18 +189,19 @@ public class NamesrvStartup {
         if (null == controller) {
             throw new IllegalArgumentException("NamesrvController is null");
         }
-
+        // 初始化定时任务
         boolean initResult = controller.initialize();
         if (!initResult) {
+            // 初始化, 服务关闭退出
             controller.shutdown();
             System.exit(-3);
         }
-
+        // 添加服务关闭钩子, 在服务正常关闭: bin/mqshutdown namesrv时执行来释放资源, kill -9 不会执行
         Runtime.getRuntime().addShutdownHook(new ShutdownHookThread(log, (Callable<Void>) () -> {
             controller.shutdown();
             return null;
         }));
-
+        // 启动
         controller.start();
 
         return controller;

@@ -389,7 +389,9 @@ public class DefaultMessageStore implements MessageStore {
         // Checking is not necessary, as long as the dLedger's implementation exactly follows the definition of Recover,
         // which is eliminating the dispatch inconsistency between the commitLog and consumeQueue at the end of recovery.
         this.doRecheckReputOffsetFromCq();
-
+        /**
+         * @see FlushConsumeQueueService#run()
+         */
         this.flushConsumeQueueService.start();
         this.commitLog.start();
         this.storeStatsService.start();

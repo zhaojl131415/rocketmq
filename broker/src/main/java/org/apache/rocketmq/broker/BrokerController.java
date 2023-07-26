@@ -1498,8 +1498,11 @@ public class BrokerController {
     }
 
     protected void startBasicService() throws Exception {
-
+        // 消息存储组件, 这里启动服务主要是为了将commitLog的写入事件分发给ConsumeQueue和IndexFile
         if (this.messageStore != null) {
+            /**
+             * @see DefaultMessageStore#start()
+             */
             this.messageStore.start();
         }
 
@@ -1599,6 +1602,10 @@ public class BrokerController {
         }
     }
 
+    /**
+     * Broker控制器核心启动方法
+     * @throws Exception
+     */
     public void start() throws Exception {
 
         this.shouldStartTime = System.currentTimeMillis() + messageStoreConfig.getDisappearTimeAfterStart();
@@ -1606,11 +1613,11 @@ public class BrokerController {
         if (messageStoreConfig.getTotalReplicas() > 1 && this.brokerConfig.isEnableSlaveActingMaster()) {
             isIsolated = true;
         }
-
+        // 启动对外发送请求的组件(netty客户端): 发送心跳
         if (this.brokerOuterAPI != null) {
             this.brokerOuterAPI.start();
         }
-
+        // 启动基础服务
         startBasicService();
 
         if (!isIsolated && !this.messageStoreConfig.isEnableDLegerCommitLog() && !this.messageStoreConfig.isDuplicationEnable()) {

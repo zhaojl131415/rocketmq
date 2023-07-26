@@ -67,7 +67,7 @@ public class BatchUnregistrationService extends ServiceThread {
 
                 // Add polled request
                 unregistrationRequests.add(request);
-
+                // 注销Broker
                 this.routeInfoManager.unRegisterBroker(unregistrationRequests);
             } catch (Throwable e) {
                 log.error("Handle unregister broker request failed", e);

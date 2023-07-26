@@ -160,6 +160,10 @@ public class BrokerOuterAPI {
     }
 
     public void start() {
+        /**
+         * level:sss 启动一个netty客户端
+         * @see NettyRemotingClient#start()
+         */
         this.remotingClient.start();
     }
 

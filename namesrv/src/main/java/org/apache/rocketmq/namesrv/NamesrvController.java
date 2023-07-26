@@ -53,6 +53,10 @@ import org.apache.rocketmq.remoting.netty.TlsSystemConfig;
 import org.apache.rocketmq.remoting.protocol.RequestCode;
 import org.apache.rocketmq.srvutil.FileWatchService;
 
+/**
+ * level:sss NameServer控制器
+ * NameServer的核心组件, 类似于web应用的Controller, 负责接受并处理网络请求
+ */
 public class NamesrvController {
     private static final Logger LOGGER = LoggerFactory.getLogger(LoggerName.NAMESRV_LOGGER_NAME);
     private static final Logger WATER_MARK_LOG = LoggerFactory.getLogger(LoggerName.NAMESRV_WATER_MARK_LOGGER_NAME);
@@ -100,22 +104,41 @@ public class NamesrvController {
         this.configuration.setStorePathFromConfig(this.namesrvConfig, "configStorePath");
     }
 
+    /**
+     * level:s NameServer控制器初始化
+     * 定时任务
+     * @return
+     */
     public boolean initialize() {
         loadConfig();
+        // 初始化网络组件
         initiateNetworkComponents();
+        // 初始化线程池执行器
         initiateThreadExecutors();
+        // NameServer注册Processor到
         registerProcessor();
+        // 启动定时器线程池: 定时执行服务
         startScheduleService();
+        // SSL安全相关
         initiateSslContext();
+        // 初始化远程调用钩子
         initiateRpcHooks();
         return true;
     }
 
     private void loadConfig() {
+        // 加载key value配置管理器
         this.kvConfigManager.load();
     }
 
+    /**
+     * 启动定时器线程池: 定时执行服务
+     */
     private void startScheduleService() {
+        /**
+         * 扫描线程池定时执行方法: {@link RouteInfoManager#scanNotActiveBroker()}
+         * 表示5毫秒后开始执行第一次, 之后每间隔5s执行一次扫描不活跃的Broker将其销毁
+         */
         this.scanExecutorService.scheduleAtFixedRate(NamesrvController.this.routeInfoManager::scanNotActiveBroker,
             5, this.namesrvConfig.getScanNotActiveBrokerInterval(), TimeUnit.MILLISECONDS);
 
@@ -132,12 +155,14 @@ public class NamesrvController {
     }
 
     private void initiateNetworkComponents() {
+        // 创建NettyServer网络处理对象
         this.remotingServer = new NettyRemotingServer(this.nettyServerConfig, this.brokerHousekeepingService);
         this.remotingClient = new NettyRemotingClient(this.nettyClientConfig);
     }
 
     private void initiateThreadExecutors() {
         this.defaultThreadPoolQueue = new LinkedBlockingQueue<>(this.namesrvConfig.getDefaultThreadPoolQueueCapacity());
+        // 默认线程池
         this.defaultExecutor = new ThreadPoolExecutor(this.namesrvConfig.getDefaultThreadPoolNums(), this.namesrvConfig.getDefaultThreadPoolNums(), 1000 * 60, TimeUnit.MILLISECONDS, this.defaultThreadPoolQueue, new ThreadFactoryImpl("RemotingExecutorThread_")) {
             @Override
             protected <T> RunnableFuture<T> newTaskFor(final Runnable runnable, final T value) {
@@ -145,7 +170,9 @@ public class NamesrvController {
             }
         };
 
+        // 客户端请求线程池队列
         this.clientRequestThreadPoolQueue = new LinkedBlockingQueue<>(this.namesrvConfig.getClientRequestThreadPoolQueueCapacity());
+        // 客户端请求线程池执行器
         this.clientRequestExecutor = new ThreadPoolExecutor(this.namesrvConfig.getClientRequestThreadPoolNums(), this.namesrvConfig.getClientRequestThreadPoolNums(), 1000 * 60, TimeUnit.MILLISECONDS, this.clientRequestThreadPoolQueue, new ThreadFactoryImpl("ClientRequestExecutorThread_")) {
             @Override
             protected <T> RunnableFuture<T> newTaskFor(final Runnable runnable, final T value) {
@@ -155,6 +182,7 @@ public class NamesrvController {
     }
 
     private void initiateSslContext() {
+        // tls是一个安全传输层协议, 相关参数只能通过jvm命令指定
         if (TlsSystemConfig.tlsMode == TlsMode.DISABLED) {
             return;
         }
@@ -231,6 +259,7 @@ public class NamesrvController {
     }
 
     public void start() throws Exception {
+        // 启动netty服务端
         this.remotingServer.start();
 
         // In test scenarios where it is up to OS to pick up an available port, set the listening port back to config
@@ -240,12 +269,13 @@ public class NamesrvController {
 
         this.remotingClient.updateNameServerAddressList(Collections.singletonList(NetworkUtil.getLocalAddress()
             + ":" + nettyServerConfig.getListenPort()));
+        // 启动netty客户端
         this.remotingClient.start();
 
         if (this.fileWatchService != null) {
             this.fileWatchService.start();
         }
-
+        // 启动路由信息管理器: 其实就是启动注销过期Broker的线程
         this.routeInfoManager.start();
     }
 

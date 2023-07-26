@@ -65,13 +65,18 @@ import org.apache.rocketmq.remoting.protocol.route.QueueData;
 import org.apache.rocketmq.remoting.protocol.route.TopicRouteData;
 import org.apache.rocketmq.remoting.protocol.statictopic.TopicQueueMappingInfo;
 
+/**
+ * level:ss 路由信息管理器: 即Broker管理器
+ */
 public class RouteInfoManager {
     private static final Logger log = LoggerFactory.getLogger(LoggerName.NAMESRV_LOGGER_NAME);
     private final static long DEFAULT_BROKER_CHANNEL_EXPIRED_TIME = 1000 * 60 * 2;
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
     private final Map<String/* topic */, Map<String, QueueData>> topicQueueTable;
+    // Broker地址集合
     private final Map<String/* brokerName */, BrokerData> brokerAddrTable;
     private final Map<String/* clusterName */, Set<String/* brokerName */>> clusterAddrTable;
+    // 活跃的Broker集合
     private final Map<BrokerAddrInfo/* brokerAddr */, BrokerLiveInfo> brokerLiveTable;
     private final Map<BrokerAddrInfo/* brokerAddr */, List<String>/* Filter Server */> filterServerTable;
     private final Map<String/* topic */, Map<String/*brokerName*/, TopicQueueMappingInfo>> topicQueueMappingInfoTable;
@@ -93,7 +98,14 @@ public class RouteInfoManager {
         this.namesrvController = namesrvController;
     }
 
+    /**
+     * 启动注销Broker服务
+     */
     public void start() {
+        /**
+         * 启动批量注销Broker线程
+         * @see BatchUnregistrationService#run()
+         */
         this.unRegisterService.start();
     }
 
@@ -537,7 +549,7 @@ public class RouteInfoManager {
                 final String brokerAddr = unRegisterRequest.getBrokerAddr();
 
                 BrokerAddrInfo brokerAddrInfo = new BrokerAddrInfo(clusterName, brokerAddr);
-
+                // 从活跃的Broker表中移除
                 BrokerLiveInfo brokerLiveInfo = this.brokerLiveTable.remove(brokerAddrInfo);
                 log.info("unregisterBroker, remove from brokerLiveTable {}, {}",
                     brokerLiveInfo != null ? "OK" : "Failed",
@@ -756,12 +768,19 @@ public class RouteInfoManager {
         return null;
     }
 
+    /**
+     * 扫描不活跃的Broker
+     */
     public void scanNotActiveBroker() {
         try {
             log.info("start scanNotActiveBroker");
+            // 遍历Broker集合
             for (Entry<BrokerAddrInfo, BrokerLiveInfo> next : this.brokerLiveTable.entrySet()) {
+                // 获取Broker上次更新的时间戳
                 long last = next.getValue().getLastUpdateTimestamp();
+                // 获取Broker心跳超时时长
                 long timeoutMillis = next.getValue().getHeartbeatTimeoutMillis();
+                // 如果最近一次更新时间+心跳超时时长 < 当前时间戳, 则关闭这个Broker的通道, 销毁Broker
                 if ((last + timeoutMillis) < System.currentTimeMillis()) {
                     RemotingHelper.closeChannel(next.getValue().getChannel());
                     log.warn("The broker channel expired, {} {}ms", next.getKey(), timeoutMillis);
