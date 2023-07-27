@@ -47,6 +47,8 @@ import org.apache.rocketmq.client.exception.MQBrokerException;
 import org.apache.rocketmq.client.exception.MQClientException;
 import org.apache.rocketmq.client.exception.OffsetNotFoundException;
 import org.apache.rocketmq.client.hook.SendMessageContext;
+import org.apache.rocketmq.client.impl.consumer.DefaultMQPushConsumerImpl;
+import org.apache.rocketmq.client.impl.consumer.PullRequest;
 import org.apache.rocketmq.client.impl.consumer.PullResultExt;
 import org.apache.rocketmq.client.impl.factory.MQClientInstance;
 import org.apache.rocketmq.client.impl.producer.DefaultMQProducerImpl;
@@ -859,6 +861,18 @@ public class MQClientAPIImpl implements NameServerUpdateCallback {
         return sendResult;
     }
 
+    /**
+     * level:a 消费者拉取消息
+     * @param addr
+     * @param requestHeader
+     * @param timeoutMillis
+     * @param communicationMode
+     * @param pullCallback
+     * @return
+     * @throws RemotingException
+     * @throws MQBrokerException
+     * @throws InterruptedException
+     */
     public PullResult pullMessage(
         final String addr,
         final PullMessageRequestHeader requestHeader,
@@ -878,9 +892,11 @@ public class MQClientAPIImpl implements NameServerUpdateCallback {
                 assert false;
                 return null;
             case ASYNC:
+                // 异步
                 this.pullMessageAsync(addr, request, timeoutMillis, pullCallback);
                 return null;
             case SYNC:
+                // 同步
                 return this.pullMessageSync(addr, request, timeoutMillis);
             default:
                 assert false;
@@ -1019,6 +1035,11 @@ public class MQClientAPIImpl implements NameServerUpdateCallback {
                     try {
                         PullResult pullResult = MQClientAPIImpl.this.processPullResponse(response, addr);
                         assert pullResult != null;
+                        /**
+                         * 执行回调成功的方法:
+                         * @see DefaultMQPushConsumerImpl#pullMessage(PullRequest)方法中指定了回调函数: PullCallback
+                         * @see PullCallback#onSuccess(PullResult)
+                         */
                         pullCallback.onSuccess(pullResult);
                     } catch (Exception e) {
                         pullCallback.onException(e);

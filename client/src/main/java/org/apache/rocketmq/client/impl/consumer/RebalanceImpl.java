@@ -28,6 +28,8 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import org.apache.rocketmq.client.consumer.AllocateMessageQueueStrategy;
+import org.apache.rocketmq.client.consumer.rebalance.AllocateMessageQueueAveragely;
+import org.apache.rocketmq.client.consumer.rebalance.AllocateMessageQueueAveragelyByCircle;
 import org.apache.rocketmq.client.exception.MQClientException;
 import org.apache.rocketmq.client.impl.FindBrokerResult;
 import org.apache.rocketmq.client.impl.factory.MQClientInstance;
@@ -54,8 +56,10 @@ public abstract class RebalanceImpl {
 
     protected final ConcurrentMap<String/* topic */, Set<MessageQueue>> topicSubscribeInfoTable =
         new ConcurrentHashMap<>();
+    // 用于维护topic和SubscriptionData的订阅信息
     protected final ConcurrentMap<String /* topic */, SubscriptionData> subscriptionInner =
         new ConcurrentHashMap<>();
+    // 消费者组
     protected String consumerGroup;
     protected MessageModel messageModel;
     protected AllocateMessageQueueStrategy allocateMessageQueueStrategy;
@@ -241,6 +245,7 @@ public abstract class RebalanceImpl {
             for (final Map.Entry<String, SubscriptionData> entry : subTable.entrySet()) {
                 final String topic = entry.getKey();
                 try {
+                    // 客户端负载均衡
                     if (!clientRebalance(topic) && tryQueryAssignment(topic)) {
                         balanced = this.getRebalanceResultFromBroker(topic, isOrder);
                     } else {
@@ -298,7 +303,9 @@ public abstract class RebalanceImpl {
 
     private boolean rebalanceByTopic(final String topic, final boolean isOrder) {
         boolean balanced = true;
+        // 消息模式
         switch (messageModel) {
+            // 广播
             case BROADCASTING: {
                 Set<MessageQueue> mqSet = this.topicSubscribeInfoTable.get(topic);
                 if (mqSet != null) {
@@ -315,8 +322,11 @@ public abstract class RebalanceImpl {
                 }
                 break;
             }
+            // 集群
             case CLUSTERING: {
+                // 获取topic下所有的消息队列
                 Set<MessageQueue> mqSet = this.topicSubscribeInfoTable.get(topic);
+                // 获取topic下同一消费者组下的所有消费者实例
                 List<String> cidAll = this.mQClientFactory.findConsumerIdList(topic, consumerGroup);
                 if (null == mqSet) {
                     if (!topic.startsWith(MixAll.RETRY_GROUP_TOPIC_PREFIX)) {
@@ -328,18 +338,24 @@ public abstract class RebalanceImpl {
                 if (null == cidAll) {
                     log.warn("doRebalance, {} {}, get consumer id list failed", consumerGroup, topic);
                 }
-
+                // level:b 消费者负载均衡, 分配消息队列
                 if (mqSet != null && cidAll != null) {
                     List<MessageQueue> mqAll = new ArrayList<>();
                     mqAll.addAll(mqSet);
-
+                    // 所有的队列排序
                     Collections.sort(mqAll);
+                    // 所有的消费者实例排序
                     Collections.sort(cidAll);
 
                     AllocateMessageQueueStrategy strategy = this.allocateMessageQueueStrategy;
 
                     List<MessageQueue> allocateResult = null;
                     try {
+                        /**
+                         * 按策略分配
+                         * @see AllocateMessageQueueAveragely#allocate(String, String, List, List)
+                         * @see AllocateMessageQueueAveragelyByCircle#allocate(String, String, List, List)
+                         */
                         allocateResult = strategy.allocate(
                             this.consumerGroup,
                             this.mQClientFactory.getClientId(),

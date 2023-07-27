@@ -98,6 +98,7 @@ public class PullMessageService extends ServiceThread {
         final MQConsumerInner consumer = this.mQClientFactory.selectConsumer(pullRequest.getConsumerGroup());
         if (consumer != null) {
             DefaultMQPushConsumerImpl impl = (DefaultMQPushConsumerImpl) consumer;
+            // 推模式也是用拉的方式实现的
             impl.pullMessage(pullRequest);
         } else {
             logger.warn("No matched consumer for the PullRequest {}, drop it", pullRequest);
@@ -120,7 +121,9 @@ public class PullMessageService extends ServiceThread {
 
         while (!this.isStopped()) {
             try {
+                // 从队列中获取一个消息请求
                 MessageRequest messageRequest = this.messageRequestQueue.take();
+                // 判断消息请求模式
                 if (messageRequest.getMessageRequestMode() == MessageRequestMode.POP) {
                     this.popMessage((PopRequest) messageRequest);
                 } else {

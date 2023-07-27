@@ -22,6 +22,12 @@ import org.apache.rocketmq.common.message.MessageQueue;
 
 /**
  * Average Hashing queue algorithm
+ * 平均哈希队列算法: 根据平均数分配
+ * 例:
+ * 队列: 1 2 3 4 5
+ * 同一个组的消费者实例: A B C
+ * 计算平均值为2, 分配: 1-A 2-A 3-B 4-B 5-C
+ * 结果:A->1.2; B->3.4; C->5
  */
 public class AllocateMessageQueueAveragely extends AbstractAllocateMessageQueueStrategy {
 
@@ -36,6 +42,7 @@ public class AllocateMessageQueueAveragely extends AbstractAllocateMessageQueueS
 
         int index = cidAll.indexOf(currentCID);
         int mod = mqAll.size() % cidAll.size();
+        // 计算平均数量
         int averageSize =
             mqAll.size() <= cidAll.size() ? 1 : (mod > 0 && index < mod ? mqAll.size() / cidAll.size()
                 + 1 : mqAll.size() / cidAll.size());

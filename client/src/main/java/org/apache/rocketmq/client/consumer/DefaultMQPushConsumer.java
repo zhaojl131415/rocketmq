@@ -61,7 +61,8 @@ import org.apache.rocketmq.logging.org.slf4j.LoggerFactory;
  * <p>
  * <strong>Thread Safety:</strong> After initialization, the instance can be regarded as thread-safe.
  * </p>
- * 推模式
+ * level:sss 默认mq推模式消费者
+ * 使用更多的方式
  */
 public class DefaultMQPushConsumer extends ClientConfig implements MQPushConsumer {
 
@@ -140,6 +141,7 @@ public class DefaultMQPushConsumer extends ClientConfig implements MQPushConsume
     private String consumeTimestamp = UtilAll.timeMillisToHumanString3(System.currentTimeMillis() - (1000 * 60 * 30));
 
     /**
+     * 负载均衡策略: 队列分配算法，指定如何将消息队列分配给每个使用者客户端
      * Queue allocation algorithm specifying how message queues are allocated to each consumer clients.
      */
     private AllocateMessageQueueStrategy allocateMessageQueueStrategy;
@@ -736,13 +738,16 @@ public class DefaultMQPushConsumer extends ClientConfig implements MQPushConsume
     }
 
     /**
+     * 启动消费者
      * This method gets internal infrastructure readily to serve. Instances must call this method after configuration.
      *
      * @throws MQClientException if there is any client error.
      */
     @Override
     public void start() throws MQClientException {
+        //
         setConsumerGroup(NamespaceUtil.wrapNamespace(this.getNamespace(), this.consumerGroup));
+        //
         this.defaultMQPushConsumerImpl.start();
         if (null != traceDispatcher) {
             try {
@@ -800,7 +805,7 @@ public class DefaultMQPushConsumer extends ClientConfig implements MQPushConsume
     }
 
     /**
-     * 为当前消费者指定订阅topic
+     * level:a 为当前消费者指定订阅topic
      * Subscribe a topic to consuming subscription.
      *
      * @param topic topic to subscribe.

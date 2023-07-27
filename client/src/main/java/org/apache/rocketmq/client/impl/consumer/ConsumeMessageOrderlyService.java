@@ -203,7 +203,12 @@ public class ConsumeMessageOrderlyService implements ConsumeMessageService {
         final MessageQueue messageQueue,
         final boolean dispathToConsume) {
         if (dispathToConsume) {
+            // 构建ConsumeRequest: 为Runnable的实现类
             ConsumeRequest consumeRequest = new ConsumeRequest(processQueue, messageQueue);
+            /**
+             * 通过线程池执行, 则会执行run方法
+             * @see ConsumeRequest#run()
+             */
             this.consumeExecutor.submit(consumeRequest);
         }
     }
@@ -422,14 +427,18 @@ public class ConsumeMessageOrderlyService implements ConsumeMessageService {
             return messageQueue;
         }
 
+        /**
+         * level:a 顺序消息拉取实现
+         */
         @Override
         public void run() {
             if (this.processQueue.isDropped()) {
                 log.warn("run, the message queue not be able to consume, because it's dropped. {}", this.messageQueue);
                 return;
             }
-
+            // 顺序消息锁定队列
             final Object objLock = messageQueueLock.fetchLockObject(this.messageQueue);
+            // 锁定队列, 锁释放才能消费队列中的下一个消息
             synchronized (objLock) {
                 if (MessageModel.BROADCASTING.equals(ConsumeMessageOrderlyService.this.defaultMQPushConsumerImpl.messageModel())
                     || this.processQueue.isLocked() && !this.processQueue.isLockExpired()) {
@@ -494,7 +503,7 @@ public class ConsumeMessageOrderlyService implements ConsumeMessageService {
                                         this.messageQueue);
                                     break;
                                 }
-
+                                // 顺序消费消息
                                 status = messageListener.consumeMessage(Collections.unmodifiableList(msgs), context);
                             } catch (Throwable e) {
                                 log.warn(String.format("consumeMessage exception: %s Group: %s Msgs: %s MQ: %s",
