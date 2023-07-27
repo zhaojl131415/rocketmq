@@ -27,6 +27,7 @@ public class TopicPublishInfo {
     private boolean orderTopic = false;
     private boolean haveTopicRouterInfo = false;
     private List<MessageQueue> messageQueueList = new ArrayList<>();
+    // ThreadLocal整形的自增值
     private volatile ThreadLocalIndex sendWhichQueue = new ThreadLocalIndex();
     private TopicRouteData topicRouteData;
 
@@ -66,11 +67,19 @@ public class TopicPublishInfo {
         this.haveTopicRouterInfo = haveTopicRouterInfo;
     }
 
+    /**
+     * 根据上次的broker, 轮询选择消息队列
+     * @param lastBrokerName
+     * @return
+     */
     public MessageQueue selectOneMessageQueue(final String lastBrokerName) {
+        // 如果最近一次的brokerName为空,
         if (lastBrokerName == null) {
             return selectOneMessageQueue();
         } else {
+            // 其实就是根据上一个broker, 轮询获取下一个
             for (int i = 0; i < this.messageQueueList.size(); i++) {
+                // 自增值
                 int index = this.sendWhichQueue.incrementAndGet();
                 int pos = index % this.messageQueueList.size();
                 MessageQueue mq = this.messageQueueList.get(pos);
@@ -82,10 +91,16 @@ public class TopicPublishInfo {
         }
     }
 
+    /**
+     * 轮询选择消息队列
+     * @return
+     */
     public MessageQueue selectOneMessageQueue() {
+        // 自增值
         int index = this.sendWhichQueue.incrementAndGet();
+        // 自增值取模
         int pos = index % this.messageQueueList.size();
-
+        // 根据下标获取消息队列
         return this.messageQueueList.get(pos);
     }
 

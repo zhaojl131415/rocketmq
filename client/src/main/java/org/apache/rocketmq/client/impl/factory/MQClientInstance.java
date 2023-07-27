@@ -94,11 +94,13 @@ public class MQClientInstance {
 
     /**
      * The container of the producer in the current client. The key is the name of producerGroup.
+     * 当前客户端中生产者的容器。关键是生产者组的名称
      */
     private final ConcurrentMap<String, MQProducerInner> producerTable = new ConcurrentHashMap<>();
 
     /**
      * The container of the consumer in the current client. The key is the name of consumerGroup.
+     * 前客户端中消费者的容器。关键是消费者组的名称
      */
     private final ConcurrentMap<String, MQConsumerInner> consumerTable = new ConcurrentHashMap<>();
 
@@ -253,20 +255,22 @@ public class MQClientInstance {
         synchronized (this) {
             switch (this.serviceState) {
                 case CREATE_JUST:
+                    // 服务状态
                     this.serviceState = ServiceState.START_FAILED;
-                    // If not specified,looking address from name server
+                    // If not specified,looking address from name server 如果未指定，则从名称服务器查找地址
                     if (null == this.clientConfig.getNamesrvAddr()) {
+                        // 查找NameServer地址
                         this.mQClientAPIImpl.fetchNameServerAddr();
                     }
                     // Start request-response channel
                     this.mQClientAPIImpl.start();
-                    // Start various schedule tasks
+                    // Start various schedule tasks  启动各种计划任务
                     this.startScheduledTask();
-                    // Start pull service
+                    // Start pull service 开启拉取消息服务
                     this.pullMessageService.start();
-                    // Start rebalance service
+                    // Start rebalance service 开启消费者负载均衡服务
                     this.rebalanceService.start();
-                    // Start push service
+                    // Start push service 启动push服务
                     this.defaultMQProducer.getDefaultMQProducerImpl().start(false);
                     log.info("the client factory [{}] start OK", this.clientId);
                     this.serviceState = ServiceState.RUNNING;
@@ -281,6 +285,7 @@ public class MQClientInstance {
 
     private void startScheduledTask() {
         if (null == this.clientConfig.getNamesrvAddr()) {
+            // 定时周期执行更新NameServer地址
             this.scheduledExecutorService.scheduleAtFixedRate(() -> {
                 try {
                     MQClientInstance.this.mQClientAPIImpl.fetchNameServerAddr();
@@ -289,7 +294,7 @@ public class MQClientInstance {
                 }
             }, 1000 * 10, 1000 * 60 * 2, TimeUnit.MILLISECONDS);
         }
-
+        // 定时周期执行 从NameServer更新每个topic的路由信息
         this.scheduledExecutorService.scheduleAtFixedRate(() -> {
             try {
                 MQClientInstance.this.updateTopicRouteInfoFromNameServer();
@@ -297,7 +302,7 @@ public class MQClientInstance {
                 log.error("ScheduledTask updateTopicRouteInfoFromNameServer exception", e);
             }
         }, 10, this.clientConfig.getPollNameServerInterval(), TimeUnit.MILLISECONDS);
-
+        // 定时周期执行 发送心跳给所有broker
         this.scheduledExecutorService.scheduleAtFixedRate(() -> {
             try {
                 MQClientInstance.this.cleanOfflineBroker();
@@ -306,7 +311,7 @@ public class MQClientInstance {
                 log.error("ScheduledTask sendHeartbeatToAllBroker exception", e);
             }
         }, 1000, this.clientConfig.getHeartbeatBrokerInterval(), TimeUnit.MILLISECONDS);
-
+        // 定时周期执行 持久化所有消费者的消息偏移量
         this.scheduledExecutorService.scheduleAtFixedRate(() -> {
             try {
                 MQClientInstance.this.persistAllConsumerOffset();
@@ -314,7 +319,7 @@ public class MQClientInstance {
                 log.error("ScheduledTask persistAllConsumerOffset exception", e);
             }
         }, 1000 * 10, this.clientConfig.getPersistConsumerOffsetInterval(), TimeUnit.MILLISECONDS);
-
+        // 定时周期执行 线程池调整
         this.scheduledExecutorService.scheduleAtFixedRate(() -> {
             try {
                 MQClientInstance.this.adjustThreadPool();
@@ -874,7 +879,7 @@ public class MQClientInstance {
         if (null == group || null == consumer) {
             return false;
         }
-
+        // 将当前消费者放入对应的消费者组内
         MQConsumerInner prev = this.consumerTable.putIfAbsent(group, consumer);
         if (prev != null) {
             log.warn("the consumer group[" + group + "] exist already.");
@@ -919,7 +924,7 @@ public class MQClientInstance {
         if (null == group || null == producer) {
             return false;
         }
-
+        // 将当前生产者放入对应的生产者组内
         MQProducerInner prev = this.producerTable.putIfAbsent(group, producer);
         if (prev != null) {
             log.warn("the producer group[{}] exist already.", group);

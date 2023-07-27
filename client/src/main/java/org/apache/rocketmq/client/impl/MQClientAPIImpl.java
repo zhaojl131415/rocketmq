@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.rocketmq.client.ClientConfig;
@@ -90,6 +91,7 @@ import org.apache.rocketmq.remoting.exception.RemotingTimeoutException;
 import org.apache.rocketmq.remoting.exception.RemotingTooMuchRequestException;
 import org.apache.rocketmq.remoting.netty.NettyClientConfig;
 import org.apache.rocketmq.remoting.netty.NettyRemotingClient;
+import org.apache.rocketmq.remoting.netty.NettyRequestProcessor;
 import org.apache.rocketmq.remoting.netty.ResponseFuture;
 import org.apache.rocketmq.remoting.protocol.DataVersion;
 import org.apache.rocketmq.remoting.protocol.LanguageCode;
@@ -240,6 +242,14 @@ public class MQClientAPIImpl implements NameServerUpdateCallback {
     private String nameSrvAddr = null;
     private ClientConfig clientConfig;
 
+    /**
+     * level:a MQ客户端API实现类
+     *
+     * @param nettyClientConfig
+     * @param clientRemotingProcessor
+     * @param rpcHook
+     * @param clientConfig
+     */
     public MQClientAPIImpl(final NettyClientConfig nettyClientConfig,
         final ClientRemotingProcessor clientRemotingProcessor,
         RPCHook rpcHook, final ClientConfig clientConfig) {
@@ -255,6 +265,11 @@ public class MQClientAPIImpl implements NameServerUpdateCallback {
         }
         this.remotingClient.registerRPCHook(rpcHook);
         this.remotingClient.registerRPCHook(new DynamicalExtFieldRPCHook());
+        // 注册处理器
+        /**
+         * 处理检查事务消息的状态
+         * @see NettyRemotingClient#registerProcessor(int, NettyRequestProcessor, ExecutorService)
+         */
         this.remotingClient.registerProcessor(RequestCode.CHECK_TRANSACTION_STATE, this.clientRemotingProcessor, null);
 
         this.remotingClient.registerProcessor(RequestCode.NOTIFY_CONSUMER_IDS_CHANGED, this.clientRemotingProcessor, null);
@@ -315,6 +330,9 @@ public class MQClientAPIImpl implements NameServerUpdateCallback {
     }
 
     public void start() {
+        /**
+         * @see NettyRemotingClient#start()
+         */
         this.remotingClient.start();
     }
 
@@ -548,6 +566,25 @@ public class MQClientAPIImpl implements NameServerUpdateCallback {
         return sendMessage(addr, brokerName, msg, requestHeader, timeoutMillis, communicationMode, null, null, null, 0, context, producer);
     }
 
+    /**
+     * level:a 执行发送消息
+     * @param addr
+     * @param brokerName
+     * @param msg
+     * @param requestHeader
+     * @param timeoutMillis
+     * @param communicationMode
+     * @param sendCallback
+     * @param topicPublishInfo
+     * @param instance
+     * @param retryTimesWhenSendFailed
+     * @param context
+     * @param producer
+     * @return
+     * @throws RemotingException
+     * @throws MQBrokerException
+     * @throws InterruptedException
+     */
     public SendResult sendMessage(
         final String addr,
         final String brokerName,
@@ -582,9 +619,10 @@ public class MQClientAPIImpl implements NameServerUpdateCallback {
             }
         }
         request.setBody(msg.getBody());
-
+        // 通信方式
         switch (communicationMode) {
             case ONEWAY:
+                // 发送单向消息, 直接发给netty处理, 不关心结果
                 this.remotingClient.invokeOneway(addr, request, timeoutMillis);
                 return null;
             case ASYNC:
@@ -593,6 +631,7 @@ public class MQClientAPIImpl implements NameServerUpdateCallback {
                 if (timeoutMillis < costTimeAsync) {
                     throw new RemotingTooMuchRequestException("sendMessage call timeout");
                 }
+                // 发送异步消息
                 this.sendMessageAsync(addr, brokerName, msg, timeoutMillis - costTimeAsync, request, sendCallback, topicPublishInfo, instance,
                     retryTimesWhenSendFailed, times, context, producer);
                 return null;
@@ -601,6 +640,7 @@ public class MQClientAPIImpl implements NameServerUpdateCallback {
                 if (timeoutMillis < costTimeSync) {
                     throw new RemotingTooMuchRequestException("sendMessage call timeout");
                 }
+                // 发送同步消息
                 return this.sendMessageSync(addr, brokerName, msg, timeoutMillis - costTimeSync, request);
             default:
                 assert false;
@@ -617,8 +657,10 @@ public class MQClientAPIImpl implements NameServerUpdateCallback {
         final long timeoutMillis,
         final RemotingCommand request
     ) throws RemotingException, MQBrokerException, InterruptedException {
+        // 执行发送
         RemotingCommand response = this.remotingClient.invokeSync(addr, request, timeoutMillis);
         assert response != null;
+        // 处理发送响应
         return this.processSendResponse(brokerName, msg, response, addr);
     }
 

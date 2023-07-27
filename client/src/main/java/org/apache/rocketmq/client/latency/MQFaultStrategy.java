@@ -57,6 +57,7 @@ public class MQFaultStrategy {
     }
 
     public MessageQueue selectOneMessageQueue(final TopicPublishInfo tpInfo, final String lastBrokerName) {
+        // 是否允许发消息长时间延时, 默认为false
         if (this.sendLatencyFaultEnable) {
             try {
                 int index = tpInfo.getSendWhichQueue().incrementAndGet();
@@ -86,7 +87,7 @@ public class MQFaultStrategy {
 
             return tpInfo.selectOneMessageQueue();
         }
-
+        // 根据上次的broker, 轮询选择消息队列
         return tpInfo.selectOneMessageQueue(lastBrokerName);
     }
 

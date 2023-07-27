@@ -60,6 +60,7 @@ import org.apache.rocketmq.logging.org.slf4j.LoggerFactory;
  * <p> <strong>Thread Safety:</strong> After configuring and starting process, this class can be regarded as thread-safe
  * and used among multiple threads context. </p>
  *
+ * level:sss 默认消息生产者
  * 此类是打算发送消息的应用程序的入口点。
  * 可以调整公开 getter/setter 方法的字段，但请记住，在大多数情况下，所有这些字段都应该开箱即用。
  * 此类聚合了将 send 消息传递到代理的各种方法。他们每个人都有优点和缺点;在实际编码之前，您最好了解它们的优点和缺点。
@@ -83,9 +84,11 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
     ));
 
     /**
+     * 生产者组从概念上聚合了具有完全相同角色的所有生产者实例，这在涉及事务性消息时尤其重要。
      * Producer group conceptually aggregates all producer instances of exactly same role, which is particularly
      * important when transactional messages are involved. </p>
      *
+     * 对于非事务性消息，只要每个进程是唯一的，就无关紧要
      * For non-transactional messages, it does not matter as long as it's unique per process. </p>
      *
      * See <a href="https://rocketmq.apache.org/docs/introduction/02concepts">core concepts</a> for more discussion.
@@ -99,11 +102,13 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
 
     /**
      * Number of queues to create per default topic.
+     * 默认每个主题要创建的队列数
      */
     private volatile int defaultTopicQueueNums = 4;
 
     /**
      * Timeout for sending messages.
+     * 发送消息的超时时间
      */
     private int sendMsgTimeout = 3000;
 
@@ -116,6 +121,7 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
      * Maximum number of retry to perform internally before claiming sending failure in synchronous mode. </p>
      *
      * This may potentially cause message duplication which is up to application developers to resolve.
+     * 当发送消息时失败的重试次数
      */
     private int retryTimesWhenSendFailed = 2;
 
@@ -123,6 +129,7 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
      * Maximum number of retry to perform internally before claiming sending failure in asynchronous mode. </p>
      *
      * This may potentially cause message duplication which is up to application developers to resolve.
+     * 当发送异步消息时失败的重试次数
      */
     private int retryTimesWhenSendAsyncFailed = 2;
 
@@ -133,6 +140,7 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
 
     /**
      * Maximum allowed message body size in bytes.
+     * 允许的最大消息大小（以字节为单位）。
      */
     private int maxMessageSize = 1024 * 1024 * 4; // 4M
 
@@ -337,6 +345,7 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
     }
 
     /**
+     * 同步模式发送消息
      * Send message in synchronous mode. This method returns only when the sending procedure totally completes. </p>
      *
      * <strong>Warn:</strong> this method has internal retry-mechanism, that is, internal implementation will retry
@@ -522,6 +531,7 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
     }
 
     /**
+     * level:a 与 {@link #send(Message)} 方法相同, 不过指定了消息队列选择器: 实际上就顺序消息的实现, 就是指定了这个选择器
      * Same to {@link #send(Message)} with message queue selector specified.
      *
      * @param msg Message to send.
