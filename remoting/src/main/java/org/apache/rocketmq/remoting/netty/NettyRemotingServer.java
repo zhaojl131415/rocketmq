@@ -135,7 +135,9 @@ public class NettyRemotingServer extends NettyRemotingAbstract implements Remoti
     }
 
     private EventLoopGroup buildBossEventLoopGroup() {
+        // 如果能使用Epoll就用epoll, 否则用netty
         if (useEpoll()) {
+            // Netty框架针对linux做的优化, 只在linux环境有用, 可以减少gc的频率
             return new EpollEventLoopGroup(1, new ThreadFactoryImpl("NettyEPOLLBoss_"));
         } else {
             return new NioEventLoopGroup(1, new ThreadFactoryImpl("NettyNIOBoss_"));
@@ -177,6 +179,9 @@ public class NettyRemotingServer extends NettyRemotingAbstract implements Remoti
             && Epoll.isAvailable();
     }
 
+    /**
+     * 启动netty服务端
+     */
     @Override
     public void start() {
         this.defaultEventExecutorGroup = new DefaultEventExecutorGroup(nettyServerConfig.getServerWorkerThreads(),
@@ -193,6 +198,7 @@ public class NettyRemotingServer extends NettyRemotingAbstract implements Remoti
             .localAddress(new InetSocketAddress(this.nettyServerConfig.getBindAddress(),
                 this.nettyServerConfig.getListenPort()))
             .childHandler(new ChannelInitializer<SocketChannel>() {
+                // 初始化通道
                 @Override
                 public void initChannel(SocketChannel ch) {
                     configChannel(ch);
@@ -252,12 +258,19 @@ public class NettyRemotingServer extends NettyRemotingAbstract implements Remoti
         return ch.pipeline()
             .addLast(defaultEventExecutorGroup, HANDSHAKE_HANDLER_NAME, handshakeHandler)
             .addLast(defaultEventExecutorGroup,
+                // 对数据进行序列化, 将请求的参数解析成二进制
                 encoder,
+                // 将二进制转为RemotingCommand
                 new NettyDecoder(),
                 distributionHandler,
+                // 心跳
                 new IdleStateHandler(0, 0,
+                    // 读写空闲时间
                     nettyServerConfig.getServerChannelMaxIdleTimeSeconds()),
                 connectionManageHandler,
+                /**
+                 * @see NettyServerHandler#channelRead0(ChannelHandlerContext, RemotingCommand)
+                 */
                 serverHandler
             );
     }
@@ -386,6 +399,9 @@ public class NettyRemotingServer extends NettyRemotingAbstract implements Remoti
         return this.publicExecutor;
     }
 
+    /**
+     * 准备处理器
+     */
     private void prepareSharableHandlers() {
         handshakeHandler = new HandshakeHandler(TlsSystemConfig.tlsMode);
         encoder = new NettyEncoder();
@@ -499,6 +515,7 @@ public class NettyRemotingServer extends NettyRemotingAbstract implements Remoti
             int localPort = RemotingHelper.parseSocketAddressPort(ctx.channel().localAddress());
             NettyRemotingAbstract remotingAbstract = NettyRemotingServer.this.remotingServerTable.get(localPort);
             if (localPort != -1 && remotingAbstract != null) {
+                // 处理接收的消息
                 remotingAbstract.processMessageReceived(ctx, msg);
                 return;
             }

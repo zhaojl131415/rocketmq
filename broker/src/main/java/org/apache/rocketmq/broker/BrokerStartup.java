@@ -52,6 +52,7 @@ public class BrokerStartup {
 
     public static BrokerController start(BrokerController controller) {
         try {
+            // level:s 启动BrokerController
             controller.start();
 
             String tip = String.format("The broker[%s, %s] boot success. serializeType=%s",
@@ -79,9 +80,15 @@ public class BrokerStartup {
         }
     }
 
+    /**
+     * level:ss 构建Broker控制器
+     * @param args
+     * @return
+     * @throws Exception
+     */
     public static BrokerController buildBrokerController(String[] args) throws Exception {
         System.setProperty(RemotingCommand.REMOTING_VERSION_KEY, Integer.toString(MQVersion.CURRENT_VERSION));
-
+        // Broker核心配置
         final BrokerConfig brokerConfig = new BrokerConfig();
         final NettyServerConfig nettyServerConfig = new NettyServerConfig();
         final NettyClientConfig nettyClientConfig = new NettyClientConfig();
@@ -139,7 +146,7 @@ public class BrokerStartup {
                 System.exit(-3);
             }
         }
-
+        // SLAVE使用的消息常驻内存比例比MASTER低10%
         if (BrokerRole.SLAVE == messageStoreConfig.getBrokerRole()) {
             int ratio = messageStoreConfig.getAccessMessageInMemoryMaxRatio() - 10;
             messageStoreConfig.setAccessMessageInMemoryMaxRatio(ratio);
@@ -147,6 +154,7 @@ public class BrokerStartup {
 
         // Set broker role according to ha config
         if (!brokerConfig.isEnableControllerMode()) {
+            // 通过配置文件指定brokerId确定主从角色
             // 判断Broker的角色BrokerRole，setBrokerId 为0L.   < 0退出
             switch (messageStoreConfig.getBrokerRole()) {
                 case ASYNC_MASTER:
@@ -167,7 +175,7 @@ public class BrokerStartup {
         if (messageStoreConfig.isEnableDLegerCommitLog()) {
             brokerConfig.setBrokerId(-1);
         }
-
+        //
         if (brokerConfig.isEnableControllerMode() && messageStoreConfig.isEnableDLegerCommitLog()) {
             System.out.printf("The config enableControllerMode and enableDLegerCommitLog cannot both be true.%n");
             System.exit(-4);
@@ -240,8 +248,14 @@ public class BrokerStartup {
         };
     }
 
+    /**
+     * level:ss 创建Broker控制器
+     * @param args
+     * @return
+     */
     public static BrokerController createBrokerController(String[] args) {
         try {
+            // 构建BrokerController
             BrokerController controller = buildBrokerController(args);
             //初始化BrokerController
             boolean initResult = controller.initialize();
@@ -249,6 +263,7 @@ public class BrokerStartup {
                 controller.shutdown();
                 System.exit(-3);
             }
+            // 添加Broker关闭钩子, 释放资源
             Runtime.getRuntime().addShutdownHook(new Thread(buildShutdownHook(controller)));
             return controller;
         } catch (Throwable e) {

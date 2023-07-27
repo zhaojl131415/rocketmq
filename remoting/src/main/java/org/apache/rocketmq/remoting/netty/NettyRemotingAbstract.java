@@ -167,9 +167,11 @@ public abstract class NettyRemotingAbstract {
         if (msg != null) {
             switch (msg.getType()) {
                 case REQUEST_COMMAND:
+                    // 处理请求
                     processRequestCommand(ctx, msg);
                     break;
                 case RESPONSE_COMMAND:
+                    // 处理响应
                     processResponseCommand(ctx, msg);
                     break;
                 default:
@@ -207,6 +209,7 @@ public abstract class NettyRemotingAbstract {
             .put(LABEL_IS_LONG_POLLING, request.isSuspended())
             .put(LABEL_REQUEST_CODE, RemotingHelper.getRequestCodeDesc(request.getCode()))
             .put(LABEL_RESPONSE_CODE, RemotingHelper.getResponseCodeDesc(response.getCode()));
+        // 单向请求
         if (request.isOnewayRPC()) {
             attributesBuilder.put(LABEL_RESULT, RESULT_ONEWAY);
             RemotingMetricsManager.rpcLatency.record(request.getProcessTimer().elapsed(TimeUnit.MILLISECONDS), attributesBuilder.build());
@@ -245,7 +248,9 @@ public abstract class NettyRemotingAbstract {
      * @param cmd request command.
      */
     public void processRequestCommand(final ChannelHandlerContext ctx, final RemotingCommand cmd) {
+        // 通过RemotingCommand的code获取对应的请求处理器和线程池执行器
         final Pair<NettyRequestProcessor, ExecutorService> matched = this.processorTable.get(cmd.getCode());
+        // 如果不存在, 获取默认的
         final Pair<NettyRequestProcessor, ExecutorService> pair = null == matched ? this.defaultRequestProcessorPair : matched;
         final int opaque = cmd.getOpaque();
 
@@ -258,7 +263,7 @@ public abstract class NettyRemotingAbstract {
             log.error(RemotingHelper.parseChannelRemoteAddr(ctx.channel()) + error);
             return;
         }
-
+        // 构建处理请求处理器
         Runnable run = buildProcessRequestHandler(ctx, cmd, pair, opaque);
 
         if (pair.getObject1().rejectRequest()) {
@@ -302,6 +307,7 @@ public abstract class NettyRemotingAbstract {
             try {
                 String remoteAddr = RemotingHelper.parseChannelRemoteAddr(ctx.channel());
                 try {
+                    // 处理前置钩子
                     doBeforeRpcHooks(remoteAddr, cmd);
                 } catch (AbortProcessException e) {
                     throw e;
@@ -310,12 +316,15 @@ public abstract class NettyRemotingAbstract {
                 }
 
                 if (exception == null) {
+                    // 如果没异常, 处理请求
                     response = pair.getObject1().processRequest(ctx, cmd);
                 } else {
+                    // 有异常, 响应异常
                     response = RemotingCommand.createResponseCommand(RemotingSysResponseCode.SYSTEM_ERROR, null);
                 }
 
                 try {
+                    // 处理后置钩子
                     doAfterRpcHooks(remoteAddr, cmd, response);
                 } catch (AbortProcessException e) {
                     throw e;
@@ -326,7 +335,7 @@ public abstract class NettyRemotingAbstract {
                 if (exception != null) {
                     throw exception;
                 }
-
+                // 写响应
                 writeResponse(ctx.channel(), cmd, response);
             } catch (AbortProcessException e) {
                 response = RemotingCommand.createResponseCommand(e.getResponseCode(), e.getErrorMessage());

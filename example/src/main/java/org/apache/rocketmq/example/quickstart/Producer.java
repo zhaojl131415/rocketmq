@@ -71,7 +71,7 @@ public class Producer {
                     TAG /* Tag */,
                     ("Hello RocketMQ " + i).getBytes(RemotingHelper.DEFAULT_CHARSET) /* Message body */
                 );
-
+                producer.setSendMessageWithVIPChannel(true);
                 /*
                  * Call send message to deliver message to one of brokers.
                  */

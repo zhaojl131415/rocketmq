@@ -76,6 +76,13 @@ public class DefaultRequestProcessor implements NettyRequestProcessor {
         this.namesrvController = namesrvController;
     }
 
+    /**
+     * level:a 默认的请求处理器处理请求
+     * @param ctx
+     * @param request
+     * @return
+     * @throws RemotingCommandException
+     */
     @Override
     public RemotingCommand processRequest(ChannelHandlerContext ctx,
         RemotingCommand request) throws RemotingCommandException {
@@ -86,7 +93,7 @@ public class DefaultRequestProcessor implements NettyRequestProcessor {
                 RemotingHelper.parseChannelRemoteAddr(ctx.channel()),
                 request);
         }
-
+        // 通过不同的请求code, 处理不同的业务
         switch (request.getCode()) {
             case RequestCode.PUT_KV_CONFIG:
                 return this.putKVConfig(ctx, request);
@@ -97,10 +104,12 @@ public class DefaultRequestProcessor implements NettyRequestProcessor {
             case RequestCode.QUERY_DATA_VERSION:
                 return this.queryBrokerTopicConfig(ctx, request);
             case RequestCode.REGISTER_BROKER:
+                // broker注册
                 return this.registerBroker(ctx, request);
             case RequestCode.UNREGISTER_BROKER:
                 return this.unregisterBroker(ctx, request);
             case RequestCode.BROKER_HEARTBEAT:
+                // borker心跳
                 return this.brokerHeartbeat(ctx, request);
             case RequestCode.GET_BROKER_MEMBER_GROUP:
                 return this.getBrokerMemberGroup(ctx, request);

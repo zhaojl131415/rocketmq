@@ -29,7 +29,9 @@ public class BrokerConfig extends BrokerIdentity {
 
     private String brokerConfigPath = null;
 
+    // 环境变量中配置的ROCKETMQ_HOME
     private String rocketmqHome = System.getProperty(MixAll.ROCKETMQ_HOME_PROPERTY, System.getenv(MixAll.ROCKETMQ_HOME_ENV));
+    // NameServer地址
     @ImportantField
     private String namesrvAddr = System.getProperty(MixAll.NAMESRV_ADDR_PROPERTY, System.getenv(MixAll.NAMESRV_ADDR_ENV));
 
@@ -38,7 +40,7 @@ public class BrokerConfig extends BrokerIdentity {
      */
     @ImportantField
     private int listenPort = 6888;
-
+    // 多网卡环境, 需要明确指定brokerIP1, 指向对外的网卡
     @ImportantField
     private String brokerIP1 = NetworkUtil.getLocalAddress();
     private String brokerIP2 = NetworkUtil.getLocalAddress();
@@ -48,6 +50,7 @@ public class BrokerConfig extends BrokerIdentity {
 
     private int brokerPermission = PermName.PERM_READ | PermName.PERM_WRITE;
     private int defaultTopicQueueNums = 8;
+    // 是否允许自动创建Topic
     @ImportantField
     private boolean autoCreateTopicEnable = true;
 
@@ -65,6 +68,7 @@ public class BrokerConfig extends BrokerIdentity {
     private boolean traceTopicEnable = false;
     /**
      * thread numbers for send message thread pool.
+     * 发送消息线程池的线程数量
      */
     private int sendMessageThreadPoolNums = Math.min(PROCESSOR_NUMBER, 4);
     private int putMessageFutureThreadPoolNums = Math.min(PROCESSOR_NUMBER, 4);
