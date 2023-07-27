@@ -1761,7 +1761,7 @@ public class BrokerController {
     }
 
     /**
-     * 同时向所有NameServer发起心跳注册
+     * level:a 同时向所有NameServer发起心跳注册
      * @param checkOrderConfig
      * @param oneway
      * @param forceRegister
@@ -1788,17 +1788,24 @@ public class BrokerController {
             }
             topicConfigWrapper.setTopicConfigTable(topicConfigTable);
         }
-
+        // forceRegister: 是否强制注册
         if (forceRegister || needRegister(this.brokerConfig.getBrokerClusterName(),
             this.getBrokerAddr(),
             this.brokerConfig.getBrokerName(),
             this.brokerConfig.getBrokerId(),
             this.brokerConfig.getRegisterBrokerTimeoutMills(),
             this.brokerConfig.isInBrokerContainer())) {
+            // 执行注册Broker
             doRegisterBrokerAll(checkOrderConfig, oneway, topicConfigWrapper);
         }
     }
 
+    /**
+     * level:a 执行注册Broker
+     * @param checkOrderConfig
+     * @param oneway
+     * @param topicConfigWrapper
+     */
     protected void doRegisterBrokerAll(boolean checkOrderConfig, boolean oneway,
         TopicConfigSerializeWrapper topicConfigWrapper) {
 
@@ -1806,6 +1813,7 @@ public class BrokerController {
             BrokerController.LOG.info("BrokerController#doResterBrokerAll: broker has shutdown, no need to register any more.");
             return;
         }
+        // 通过brokerOuterAPI对外发送请求
         List<RegisterBrokerResult> registerBrokerResultList = this.brokerOuterAPI.registerBrokerAll(
             this.brokerConfig.getBrokerClusterName(),
             this.getBrokerAddr(),

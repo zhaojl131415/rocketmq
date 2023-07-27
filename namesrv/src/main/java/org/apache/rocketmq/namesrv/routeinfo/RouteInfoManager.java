@@ -66,14 +66,14 @@ import org.apache.rocketmq.remoting.protocol.route.TopicRouteData;
 import org.apache.rocketmq.remoting.protocol.statictopic.TopicQueueMappingInfo;
 
 /**
- * level:ss 路由信息管理器: 即Broker管理器
+ * level:ss 核心组件: 路由信息管理器(Broker管理器)
  */
 public class RouteInfoManager {
     private static final Logger log = LoggerFactory.getLogger(LoggerName.NAMESRV_LOGGER_NAME);
     private final static long DEFAULT_BROKER_CHANNEL_EXPIRED_TIME = 1000 * 60 * 2;
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
     private final Map<String/* topic */, Map<String, QueueData>> topicQueueTable;
-    // Broker地址集合
+    // Broker地址集合<brokerName, BrokerData>
     private final Map<String/* brokerName */, BrokerData> brokerAddrTable;
     private final Map<String/* clusterName */, Set<String/* brokerName */>> clusterAddrTable;
     // 活跃的Broker集合
@@ -247,9 +247,10 @@ public class RouteInfoManager {
             brokerNames.add(brokerName);
 
             boolean registerFirst = false;
-
+            // 根据brokerName判断是否已存在
             BrokerData brokerData = this.brokerAddrTable.get(brokerName);
             if (null == brokerData) {
+                // 如果不存在, 则添加到brokerAddrTable中
                 registerFirst = true;
                 brokerData = new BrokerData(clusterName, brokerName, new HashMap<>());
                 this.brokerAddrTable.put(brokerName, brokerData);

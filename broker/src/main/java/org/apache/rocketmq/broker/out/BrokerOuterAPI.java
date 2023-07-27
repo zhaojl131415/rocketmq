@@ -28,6 +28,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import io.netty.channel.ChannelHandlerContext;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.rocketmq.broker.latency.BrokerFixedThreadPoolExecutor;
 import org.apache.rocketmq.client.consumer.PullResult;
@@ -481,9 +482,13 @@ public class BrokerOuterAPI {
         final BrokerIdentity brokerIdentity) {
 
         final List<RegisterBrokerResult> registerBrokerResultList = new CopyOnWriteArrayList<>();
+        /**
+         * 通过remotingClient获取所有可用的NameServer地址列表
+         * @see NettyRemotingClient#getAvailableNameSrvList()
+         */
         List<String> nameServerAddressList = this.remotingClient.getAvailableNameSrvList();
         if (nameServerAddressList != null && nameServerAddressList.size() > 0) {
-
+            // 构建 注册Broker请求的header
             final RegisterBrokerRequestHeader requestHeader = new RegisterBrokerRequestHeader();
             requestHeader.setBrokerAddr(brokerAddr);
             requestHeader.setBrokerId(brokerId);
@@ -495,7 +500,7 @@ public class BrokerOuterAPI {
             if (heartbeatTimeoutMillis != null) {
                 requestHeader.setHeartbeatTimeoutMillis(heartbeatTimeoutMillis);
             }
-
+            // 构建 注册Broker请求的Body
             RegisterBrokerBody requestBody = new RegisterBrokerBody();
             requestBody.setTopicConfigSerializeWrapper(TopicConfigAndMappingSerializeWrapper.from(topicConfigWrapper));
             requestBody.setFilterServerList(filterServerList);
@@ -503,11 +508,13 @@ public class BrokerOuterAPI {
             final int bodyCrc32 = UtilAll.crc32(body);
             requestHeader.setBodyCrc32(bodyCrc32);
             final CountDownLatch countDownLatch = new CountDownLatch(nameServerAddressList.size());
+            // 遍历NameServer地址列表, 线程池执行Broker注册
             for (final String namesrvAddr : nameServerAddressList) {
                 brokerOuterExecutor.execute(new AbstractBrokerRunnable(brokerIdentity) {
                     @Override
                     public void run0() {
                         try {
+                            // level:a 注册Broker
                             RegisterBrokerResult result = registerBroker(namesrvAddr, oneway, timeoutMills, requestHeader, body);
                             if (result != null) {
                                 registerBrokerResultList.add(result);
@@ -542,11 +549,16 @@ public class BrokerOuterAPI {
         final byte[] body
     ) throws RemotingCommandException, MQBrokerException, RemotingConnectException, RemotingSendRequestException, RemotingTimeoutException,
         InterruptedException {
+        // 构建RemotingCommand
         RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.REGISTER_BROKER, requestHeader);
         request.setBody(body);
-
+        // 是否单向
         if (oneway) {
             try {
+                /**
+                 * 通过netty发送给NameServer服务端
+                 * @see org.apache.rocketmq.namesrv.processor.DefaultRequestProcessor#registerBroker(ChannelHandlerContext, RemotingCommand)
+                 */
                 this.remotingClient.invokeOneway(namesrvAddr, request, timeoutMills);
             } catch (RemotingTooMuchRequestException e) {
                 // Ignore
@@ -554,6 +566,10 @@ public class BrokerOuterAPI {
             return null;
         }
 
+        /**
+         * 通过netty发送给NameServer服务端
+         * @see org.apache.rocketmq.namesrv.processor.DefaultRequestProcessor#registerBroker(ChannelHandlerContext, RemotingCommand)
+         */
         RemotingCommand response = this.remotingClient.invokeSync(namesrvAddr, request, timeoutMills);
         assert response != null;
         switch (response.getCode()) {
