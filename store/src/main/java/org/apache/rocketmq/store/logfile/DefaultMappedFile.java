@@ -267,6 +267,13 @@ public class DefaultMappedFile extends AbstractMappedFile {
         return appendMessagesInner(messageExtBatch, cb, putMessageContext);
     }
 
+    /**
+     * level:a 追加消息核心
+     * @param messageExt
+     * @param cb
+     * @param putMessageContext
+     * @return
+     */
     public AppendMessageResult appendMessagesInner(final MessageExt messageExt, final AppendMessageCallback cb,
         PutMessageContext putMessageContext) {
         assert messageExt != null;

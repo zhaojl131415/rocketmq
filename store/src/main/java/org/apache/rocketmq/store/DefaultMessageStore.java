@@ -215,6 +215,7 @@ public class DefaultMessageStore implements MessageStore {
         this.brokerStatsManager = brokerStatsManager;
         this.topicConfigTable = topicConfigTable;
         this.allocateMappedFileService = new AllocateMappedFileService(this);
+        // 判断是否开启DLegerCommitLog
         if (messageStoreConfig.isEnableDLegerCommitLog()) {
             this.commitLog = new DLedgerCommitLog(this);
         } else {
@@ -393,6 +394,7 @@ public class DefaultMessageStore implements MessageStore {
          * @see FlushConsumeQueueService#run()
          */
         this.flushConsumeQueueService.start();
+
         this.commitLog.start();
         this.storeStatsService.start();
 
@@ -572,6 +574,14 @@ public class DefaultMessageStore implements MessageStore {
         }
 
         long beginTime = this.getSystemClock().now();
+        //
+        /**
+         * level:b commitLog消息写入
+         * 默认:
+         * @see CommitLog#asyncPutMessage(MessageExtBrokerInner)
+         * 启用DLedger:
+         * @see DLedgerCommitLog#asyncPutMessage(MessageExtBrokerInner)
+         */
         CompletableFuture<PutMessageResult> putResultFuture = this.commitLog.asyncPutMessage(msg);
 
         putResultFuture.thenAccept(result -> {

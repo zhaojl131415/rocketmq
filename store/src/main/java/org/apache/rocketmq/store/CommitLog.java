@@ -157,6 +157,9 @@ public class CommitLog implements Swappable {
         this.flushManager.start();
         log.info("start commitLog successfully. storeRoot: {}", this.defaultMessageStore.getMessageStoreConfig().getStorePathRootDir());
         flushDiskWatcher.setDaemon(true);
+        /**
+         * @see FlushDiskWatcher#run()
+         */
         flushDiskWatcher.start();
         if (this.coldDataCheckService != null) {
             this.coldDataCheckService.start();
@@ -1072,7 +1075,7 @@ public class CommitLog implements Swappable {
         topicQueueLock.lock(topicQueueKey);
         try {
             defaultMessageStore.assignOffset(messageExtBatch);
-
+            // 加锁
             putMessageLock.lock();
             try {
                 long beginLockTimestamp = this.defaultMessageStore.getSystemClock().now();
@@ -1093,7 +1096,7 @@ public class CommitLog implements Swappable {
                     beginTimeInLock = 0;
                     return CompletableFuture.completedFuture(new PutMessageResult(PutMessageStatus.CREATE_MAPPED_FILE_FAILED, null));
                 }
-
+                // level:b 追加消息写入commitLog
                 result = mappedFile.appendMessages(messageExtBatch, this.appendMessageCallback, putMessageContext);
                 switch (result.getStatus()) {
                     case PUT_OK:
@@ -1150,7 +1153,7 @@ public class CommitLog implements Swappable {
         // Statistics
         storeStatsService.getSinglePutMessageTopicTimesTotal(messageExtBatch.getTopic()).add(result.getMsgNum());
         storeStatsService.getSinglePutMessageTopicSizeTotal(messageExtBatch.getTopic()).add(result.getWroteBytes());
-
+        // 处理刷盘
         return handleDiskFlushAndHA(putMessageResult, messageExtBatch, needAckNums, needHandleHA);
     }
 
@@ -1974,12 +1977,19 @@ public class CommitLog implements Swappable {
             }
         }
 
+        /**
+         * 处理刷盘
+         * @param result
+         * @param messageExt
+         * @return
+         */
         @Override
         public CompletableFuture<PutMessageStatus> handleDiskFlush(AppendMessageResult result, MessageExt messageExt) {
-            // Synchronization flush
+            // Synchronization flush 同步刷盘: 每条消息都执行, 并发很低
             if (FlushDiskType.SYNC_FLUSH == CommitLog.this.defaultMessageStore.getMessageStoreConfig().getFlushDiskType()) {
                 final GroupCommitService service = (GroupCommitService) this.flushCommitLogService;
                 if (messageExt.isWaitStoreMsgOK()) {
+                    // 构建一个提交组请求
                     GroupCommitRequest request = new GroupCommitRequest(result.getWroteOffset() + result.getWroteBytes(), CommitLog.this.defaultMessageStore.getMessageStoreConfig().getSyncFlushTimeout());
                     flushDiskWatcher.add(request);
                     service.putRequest(request);
@@ -1989,7 +1999,7 @@ public class CommitLog implements Swappable {
                     return CompletableFuture.completedFuture(PutMessageStatus.PUT_OK);
                 }
             }
-            // Asynchronous flush
+            // Asynchronous flush 异步刷盘
             else {
                 if (!CommitLog.this.defaultMessageStore.isTransientStorePoolEnable()) {
                     flushCommitLogService.wakeup();
