@@ -92,6 +92,7 @@ public abstract class NettyRemotingAbstract {
     /**
      * This container holds all processors per request code, aka, for each incoming request, we may look up the
      * responding processor in this map to handle the request.
+     * 这个容器包含每个请求代码的所有处理器，也就是说，对于每个传入的请求，我们可以在此映射中查找响应处理器来处理请求
      */
     protected final HashMap<Integer/* request code */, Pair<NettyRequestProcessor, ExecutorService>> processorTable =
         new HashMap<>(64);
@@ -104,6 +105,7 @@ public abstract class NettyRemotingAbstract {
     /**
      * The default request processor to use in case there is no exact match in {@link #processorTable} per request
      * code.
+     * 如果每个请求代码的 {@link #processorTable} 中没有完全匹配项，则使用的默认请求处理器。
      */
     protected Pair<NettyRequestProcessor, ExecutorService> defaultRequestProcessorPair;
 
@@ -167,11 +169,11 @@ public abstract class NettyRemotingAbstract {
         if (msg != null) {
             switch (msg.getType()) {
                 case REQUEST_COMMAND:
-                    // 处理请求
+                    // 处理请求:
                     processRequestCommand(ctx, msg);
                     break;
                 case RESPONSE_COMMAND:
-                    // 处理响应
+                    // 处理响应: 一般是用来处理异步通知的响应
                     processResponseCommand(ctx, msg);
                     break;
                 default:

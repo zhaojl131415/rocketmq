@@ -453,6 +453,7 @@ public class BrokerOuterAPI {
     /**
      * Considering compression brings much CPU overhead to name server, stream API will not support compression and
      * compression feature is deprecated.
+     * 考虑到压缩会给名称服务器带来很多 CPU 开销，流 API 将不支持压缩，并且已弃用压缩功能
      *
      * @param clusterName
      * @param brokerAddr
@@ -556,7 +557,9 @@ public class BrokerOuterAPI {
         if (oneway) {
             try {
                 /**
-                 * 通过netty发送给NameServer服务端
+                 * 通过netty发送给NameServer服务端, 来处理请求
+                 * @see org.apache.rocketmq.namesrv.processor.DefaultRequestProcessor#processRequest(ChannelHandlerContext, RemotingCommand)
+                 * 这里因为指定了RemotingCommand的code为 RequestCode.REGISTER_BROKER, 所以会进入下面方法执行
                  * @see org.apache.rocketmq.namesrv.processor.DefaultRequestProcessor#registerBroker(ChannelHandlerContext, RemotingCommand)
                  */
                 this.remotingClient.invokeOneway(namesrvAddr, request, timeoutMills);

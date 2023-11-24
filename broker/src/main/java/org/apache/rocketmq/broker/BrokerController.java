@@ -98,12 +98,7 @@ import org.apache.rocketmq.remoting.Configuration;
 import org.apache.rocketmq.remoting.RPCHook;
 import org.apache.rocketmq.remoting.RemotingServer;
 import org.apache.rocketmq.remoting.common.TlsMode;
-import org.apache.rocketmq.remoting.netty.NettyClientConfig;
-import org.apache.rocketmq.remoting.netty.NettyRemotingServer;
-import org.apache.rocketmq.remoting.netty.NettyRequestProcessor;
-import org.apache.rocketmq.remoting.netty.NettyServerConfig;
-import org.apache.rocketmq.remoting.netty.RequestTask;
-import org.apache.rocketmq.remoting.netty.TlsSystemConfig;
+import org.apache.rocketmq.remoting.netty.*;
 import org.apache.rocketmq.remoting.protocol.BrokerSyncInfo;
 import org.apache.rocketmq.remoting.protocol.DataVersion;
 import org.apache.rocketmq.remoting.protocol.NamespaceUtil;
@@ -575,7 +570,7 @@ public class BrokerController {
             }
         }, initialDelay, period, TimeUnit.MILLISECONDS);
 
-        // 定时周期执行消费消息偏移量持久化到磁盘的任务
+        // 定时周期执行消费者消费消息偏移量持久化到磁盘的任务
         this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
@@ -588,7 +583,7 @@ public class BrokerController {
             }
         }, 1000 * 10, this.brokerConfig.getFlushConsumerOffsetInterval(), TimeUnit.MILLISECONDS);
 
-        // 定时周期执行消费者过滤器持久化的任务
+        // 定时周期执行消费者过滤器持久化的任务。 这里可以看到，消费者的过滤器是被下推到了Broker来执行的。
         this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
@@ -691,7 +686,7 @@ public class BrokerController {
     }
 
     protected void initializeScheduledTasks() {
-
+        // 初始化Broker定时任务
         initializeBrokerScheduledTasks();
 
         this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
@@ -741,6 +736,7 @@ public class BrokerController {
         if (this.brokerConfig.isFetchNameSrvAddrByDnsLookup()) {
             this.brokerOuterAPI.updateNameServerAddressListByDnsLookup(this.brokerConfig.getNamesrvAddr());
         } else {
+            // 更新NameServer的地址列表
             this.brokerOuterAPI.updateNameServerAddressList(this.brokerConfig.getNamesrvAddr());
         }
     }
@@ -832,7 +828,7 @@ public class BrokerController {
         }
 
         this.brokerMetricsManager = new BrokerMetricsManager(this);
-
+        // level:a Broker的Netty组件。注意，Broker即需要是Netty的服务端，又需要是Netty的客户端。
         if (result) {
             // 初始化远程服务: Netty服务端
             initializeRemotingServer();
@@ -1013,6 +1009,7 @@ public class BrokerController {
     private void initialRpcHooks() {
         /**
          * 扩展点: SPI加载: META-INF/service/org.apache.rocketmq.remoting.RPCHook
+         * 在应用可以针对RPCHook接口自定义扩展，写入SPI的文件中
          */
         List<RPCHook> rpcHooks = ServiceProvider.load(RPCHook.class);
         if (rpcHooks == null || rpcHooks.isEmpty()) {
@@ -1024,6 +1021,9 @@ public class BrokerController {
         }
     }
 
+    /**
+     * 注册处理器
+     */
     public void registerProcessor() {
         /*
          * SendMessageProcessor 发送消息处理器
@@ -1033,7 +1033,8 @@ public class BrokerController {
         // 发送消息处理器注册消费消息钩子
         sendMessageProcessor.registerConsumeMessageHook(consumeMessageHookList);
         /**
-         * level:a 注册消息处理器
+         * level:a 注册消息处理器:
+         * 写入{@link NettyRemotingAbstract#processorTable}缓存, 通过对应的code绑定处理器,线程池执行器
          * @see NettyRemotingServer#registerProcessor(int, NettyRequestProcessor, ExecutorService)
          */
         this.remotingServer.registerProcessor(RequestCode.SEND_MESSAGE, sendMessageProcessor, this.sendMessageExecutor);
@@ -1526,6 +1527,10 @@ public class BrokerController {
         return this.brokerConfig.getBrokerIP1() + ":" + this.nettyServerConfig.getListenPort();
     }
 
+    /**
+     * level:a 开启基础服务
+     * @throws Exception
+     */
     protected void startBasicService() throws Exception {
         // 消息存储组件, 这里启动服务主要是为了将commitLog的写入事件分发给ConsumeQueue和IndexFile
         if (this.messageStore != null) {
@@ -1788,6 +1793,7 @@ public class BrokerController {
             }
             topicConfigWrapper.setTopicConfigTable(topicConfigTable);
         }
+        // 关键: 先判断是否需要注册, 然后调用doRegisterBrokerAll执行注册
         // forceRegister: 是否强制注册
         if (forceRegister || needRegister(this.brokerConfig.getBrokerClusterName(),
             this.getBrokerAddr(),
@@ -1795,7 +1801,7 @@ public class BrokerController {
             this.brokerConfig.getBrokerId(),
             this.brokerConfig.getRegisterBrokerTimeoutMills(),
             this.brokerConfig.isInBrokerContainer())) {
-            // 执行注册Broker
+            // 关键: 执行注册Broker
             doRegisterBrokerAll(checkOrderConfig, oneway, topicConfigWrapper);
         }
     }

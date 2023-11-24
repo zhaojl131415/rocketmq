@@ -31,9 +31,14 @@ import org.apache.rocketmq.remoting.protocol.header.namesrv.UnRegisterBrokerRequ
 /**
  * BatchUnregistrationService provides a mechanism to unregister brokers in batch manner, which speeds up broker-offline
  * process.
+ *
+ * 批量注销Broker服务
  */
 public class BatchUnregistrationService extends ServiceThread {
     private final RouteInfoManager routeInfoManager;
+    /**
+     * 注销Broker请求队列
+     */
     private BlockingQueue<UnRegisterBrokerRequestHeader> unregistrationQueue;
     private static final Logger log = LoggerFactory.getLogger(LoggerName.NAMESRV_LOGGER_NAME);
 
@@ -44,6 +49,7 @@ public class BatchUnregistrationService extends ServiceThread {
 
     /**
      * Submits an unregister request to this queue.
+     * 向队列: {@link BatchUnregistrationService#unregistrationQueue} 提交注销请求。
      *
      * @param unRegisterRequest the request to submit
      * @return {@code true} if the request was added to this queue, else {@code false}
@@ -57,10 +63,14 @@ public class BatchUnregistrationService extends ServiceThread {
         return BatchUnregistrationService.class.getName();
     }
 
+    /**
+     * 在NameServer启动的时候就启动了此注销Broker的线程.
+     */
     @Override
     public void run() {
         while (!this.isStopped()) {
             try {
+                // 从队列中取出需要注销Broker的任务
                 final UnRegisterBrokerRequestHeader request = unregistrationQueue.take();
                 Set<UnRegisterBrokerRequestHeader> unregistrationRequests = new HashSet<>();
                 unregistrationQueue.drainTo(unregistrationRequests);

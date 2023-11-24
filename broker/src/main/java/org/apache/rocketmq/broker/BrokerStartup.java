@@ -175,7 +175,7 @@ public class BrokerStartup {
         if (messageStoreConfig.isEnableDLegerCommitLog()) {
             brokerConfig.setBrokerId(-1);
         }
-        //
+        // Dledger集群
         if (brokerConfig.isEnableControllerMode() && messageStoreConfig.isEnableDLegerCommitLog()) {
             System.out.printf("The config enableControllerMode and enableDLegerCommitLog cannot both be true.%n");
             System.exit(-4);
@@ -217,7 +217,7 @@ public class BrokerStartup {
         MixAll.printObjectProperties(log, nettyServerConfig);
         MixAll.printObjectProperties(log, nettyClientConfig);
         MixAll.printObjectProperties(log, messageStoreConfig);
-        //初始化BrokerController
+        // level:a 构建核心的BrokerController， 在broker.conf里可以配置哪些属性
         final BrokerController controller = new BrokerController(
             brokerConfig, nettyServerConfig, nettyClientConfig, messageStoreConfig);
 
@@ -257,7 +257,7 @@ public class BrokerStartup {
         try {
             // 构建BrokerController
             BrokerController controller = buildBrokerController(args);
-            //初始化BrokerController
+            // 初始化BrokerController
             boolean initResult = controller.initialize();
             if (!initResult) {
                 controller.shutdown();

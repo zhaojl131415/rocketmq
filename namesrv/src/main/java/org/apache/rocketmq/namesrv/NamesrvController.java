@@ -44,12 +44,7 @@ import org.apache.rocketmq.remoting.Configuration;
 import org.apache.rocketmq.remoting.RemotingClient;
 import org.apache.rocketmq.remoting.RemotingServer;
 import org.apache.rocketmq.remoting.common.TlsMode;
-import org.apache.rocketmq.remoting.netty.NettyClientConfig;
-import org.apache.rocketmq.remoting.netty.NettyRemotingClient;
-import org.apache.rocketmq.remoting.netty.NettyRemotingServer;
-import org.apache.rocketmq.remoting.netty.NettyServerConfig;
-import org.apache.rocketmq.remoting.netty.RequestTask;
-import org.apache.rocketmq.remoting.netty.TlsSystemConfig;
+import org.apache.rocketmq.remoting.netty.*;
 import org.apache.rocketmq.remoting.protocol.RequestCode;
 import org.apache.rocketmq.srvutil.FileWatchService;
 
@@ -73,6 +68,7 @@ public class NamesrvController {
             new BasicThreadFactory.Builder().namingPattern("NSScanScheduledThread").daemon(true).build());
 
     private final KVConfigManager kvConfigManager;
+    // 路由管理组件
     private final RouteInfoManager routeInfoManager;
 
     private RemotingClient remotingClient;
@@ -110,12 +106,13 @@ public class NamesrvController {
      * @return
      */
     public boolean initialize() {
+        // 读取配置文件
         loadConfig();
         // 初始化网络组件
         initiateNetworkComponents();
         // 初始化线程池执行器
         initiateThreadExecutors();
-        // NameServer注册Processor到
+        // level:s NameServer注册Processor到RemotingServer中
         registerProcessor();
         // 启动定时器线程池: 定时执行服务
         startScheduleService();
@@ -141,7 +138,7 @@ public class NamesrvController {
          */
         this.scanExecutorService.scheduleAtFixedRate(NamesrvController.this.routeInfoManager::scanNotActiveBroker,
             5, this.namesrvConfig.getScanNotActiveBrokerInterval(), TimeUnit.MILLISECONDS);
-
+        // 定时打印
         this.scheduledExecutorService.scheduleAtFixedRate(NamesrvController.this.kvConfigManager::printAllPeriodically,
             1, 10, TimeUnit.MINUTES);
 
@@ -248,8 +245,12 @@ public class NamesrvController {
         } else {
             // Support get route info only temporarily
             ClientRequestProcessor clientRequestProcessor = new ClientRequestProcessor(this);
+            /**
+             * 注册处理器
+             * 写入{@link NettyRemotingAbstract#processorTable}缓存, 通过对应的code绑定处理器,线程池执行器
+             */
             this.remotingServer.registerProcessor(RequestCode.GET_ROUTEINFO_BY_TOPIC, clientRequestProcessor, this.clientRequestExecutor);
-
+            // 注册默认的处理器, 用的时候如果没有根据对应的code找到处理器, 则使用这个默认的处理器
             this.remotingServer.registerDefaultProcessor(new DefaultRequestProcessor(this), this.defaultExecutor);
         }
     }

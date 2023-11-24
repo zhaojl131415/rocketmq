@@ -26,6 +26,9 @@ import org.apache.rocketmq.logging.org.slf4j.LoggerFactory;
 import org.apache.rocketmq.remoting.common.RemotingHelper;
 import org.apache.rocketmq.remoting.protocol.RemotingCommand;
 
+/**
+ * Netty 解码器
+ */
 public class NettyDecoder extends LengthFieldBasedFrameDecoder {
     private static final Logger log = LoggerFactory.getLogger(LoggerName.ROCKETMQ_REMOTING_NAME);
 
@@ -36,6 +39,13 @@ public class NettyDecoder extends LengthFieldBasedFrameDecoder {
         super(FRAME_MAX_LENGTH, 0, 4, 0, 4);
     }
 
+    /**
+     * 解码：将字节转成RemotingCommand
+     * @param ctx
+     * @param in
+     * @return
+     * @throws Exception
+     */
     @Override
     public Object decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
         ByteBuf frame = null;

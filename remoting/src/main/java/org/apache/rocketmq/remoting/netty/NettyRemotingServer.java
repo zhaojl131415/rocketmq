@@ -71,6 +71,9 @@ import org.apache.rocketmq.remoting.exception.RemotingTimeoutException;
 import org.apache.rocketmq.remoting.exception.RemotingTooMuchRequestException;
 import org.apache.rocketmq.remoting.protocol.RemotingCommand;
 
+/**
+ * level:sss netty服务端组件
+ */
 @SuppressWarnings("NullableProblems")
 public class NettyRemotingServer extends NettyRemotingAbstract implements RemotingServer {
     private static final Logger log = LoggerFactory.getLogger(LoggerName.ROCKETMQ_REMOTING_NAME);
@@ -135,9 +138,9 @@ public class NettyRemotingServer extends NettyRemotingAbstract implements Remoti
     }
 
     private EventLoopGroup buildBossEventLoopGroup() {
-        // 如果能使用Epoll就用epoll, 否则用netty
+        // 如果能使用Epoll就用Epoll, 否则用Nio
         if (useEpoll()) {
-            // Netty框架针对linux做的优化, 只在linux环境有用, 可以减少gc的频率
+            // Netty框架针对linux做的优化, 只在linux环境有用, 可以减少java gc的频率, 只对linux系统有用
             return new EpollEventLoopGroup(1, new ThreadFactoryImpl("NettyEPOLLBoss_"));
         } else {
             return new NioEventLoopGroup(1, new ThreadFactoryImpl("NettyNIOBoss_"));
@@ -180,7 +183,7 @@ public class NettyRemotingServer extends NettyRemotingAbstract implements Remoti
     }
 
     /**
-     * 启动netty服务端
+     * level:a 启动netty服务端
      */
     @Override
     public void start() {
@@ -265,7 +268,7 @@ public class NettyRemotingServer extends NettyRemotingAbstract implements Remoti
                 distributionHandler,
                 // 心跳
                 new IdleStateHandler(0, 0,
-                    // 读写空闲时间
+                    // 读写空闲时间: 默认120s
                     nettyServerConfig.getServerChannelMaxIdleTimeSeconds()),
                 connectionManageHandler,
                 /**
@@ -323,6 +326,12 @@ public class NettyRemotingServer extends NettyRemotingAbstract implements Remoti
         }
     }
 
+    /**
+     * 注册处理器
+     * @param requestCode
+     * @param processor
+     * @param executor
+     */
     @Override
     public void registerProcessor(int requestCode, NettyRequestProcessor processor, ExecutorService executor) {
         ExecutorService executorThis = executor;
@@ -334,6 +343,11 @@ public class NettyRemotingServer extends NettyRemotingAbstract implements Remoti
         this.processorTable.put(requestCode, pair);
     }
 
+    /**
+     * 注册默认处理器
+     * @param processor
+     * @param executor
+     */
     @Override
     public void registerDefaultProcessor(NettyRequestProcessor processor, ExecutorService executor) {
         this.defaultRequestProcessorPair = new Pair<>(processor, executor);
@@ -515,7 +529,7 @@ public class NettyRemotingServer extends NettyRemotingAbstract implements Remoti
             int localPort = RemotingHelper.parseSocketAddressPort(ctx.channel().localAddress());
             NettyRemotingAbstract remotingAbstract = NettyRemotingServer.this.remotingServerTable.get(localPort);
             if (localPort != -1 && remotingAbstract != null) {
-                // 处理接收的消息
+                // 服务端收到消息，处理接收的消息
                 remotingAbstract.processMessageReceived(ctx, msg);
                 return;
             }

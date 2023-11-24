@@ -249,7 +249,8 @@ public class DefaultRequestProcessor implements NettyRequestProcessor {
             // RegisterBrokerBody of old version only contains TopicConfig.
             topicConfigWrapper = extractRegisterTopicConfigFromRequest(request);
         }
-        // NameServer处理Broker的注册
+        // 获取NameServer的RouteInfoManager处理Broker的注册
+        // RouteInfoManager: 管理路由信息的核心组件
         RegisterBrokerResult result = this.namesrvController.getRouteInfoManager().registerBroker(
             requestHeader.getClusterName(),
             requestHeader.getBrokerAddr(),

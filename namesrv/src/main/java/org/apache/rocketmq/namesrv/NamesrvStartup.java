@@ -43,6 +43,7 @@ import org.apache.rocketmq.srvutil.ShutdownHookThread;
 /**
  * 类似于注册中心
  * level:sss NameServer核心启动类
+ * 创建且启动NameServer控制器：负责接收和处理网络请求
  */
 public class NamesrvStartup {
 
@@ -67,9 +68,9 @@ public class NamesrvStartup {
 
     public static NamesrvController main0(String[] args) {
         try {
-            // 解析命令行和配置文件
+            // 解析命令行和配置文件：NameServer的核心配置(NamesrvConfig/NettyServerConfig/NettyClientConfig)实例化
             parseCommandlineAndConfigFile(args);
-            // level:ss 创建且启动NameServer控制器
+            // level:ss 创建且启动NameServer控制器：负责接收和处理网络请求
             NamesrvController controller = createAndStartNamesrvController();
             return controller;
         } catch (Throwable e) {
@@ -93,7 +94,7 @@ public class NamesrvStartup {
     }
 
     /**
-     * 解析命令行和配置文件
+     * 解析命令行和配置文件: NameServer的核心配置(NamesrvConfig/NettyServerConfig/NettyClientConfig)实例化
      * @param args
      * @throws Exception
      */
@@ -107,13 +108,13 @@ public class NamesrvStartup {
             System.exit(-1);
             return;
         }
-        // level:a NameServer的两个核心配置
+        // level:a NameServer的核心配置(NamesrvConfig/NettyServerConfig/NettyClientConfig)实例化
         namesrvConfig = new NamesrvConfig();
         nettyServerConfig = new NettyServerConfig();
         nettyClientConfig = new NettyClientConfig();
         // 默认直接指定9876端口
         nettyServerConfig.setListenPort(9876);
-        // 命令行是否包含 c
+        // 命令行是否包含 c： 通过bin/mqnamesrv -c /usr/app/rocketmq/namesrv/namesrv.properties 命令指定配置文件。
         if (commandLine.hasOption('c')) {
             // 获取命令行-c的值: 为指定的配置文件地址
             String file = commandLine.getOptionValue('c');
