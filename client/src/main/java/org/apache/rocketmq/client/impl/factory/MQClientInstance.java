@@ -85,6 +85,9 @@ import org.apache.rocketmq.logging.org.slf4j.LoggerFactory;
 
 import static org.apache.rocketmq.remoting.rpc.ClientMetadata.topicRouteData2EndpointsForStaticTopic;
 
+/**
+ * 客户端实例
+ */
 public class MQClientInstance {
     private final static long LOCK_TIMEOUT_MILLIS = 3000;
     private final static Logger log = LoggerFactory.getLogger(MQClientInstance.class);
@@ -94,13 +97,13 @@ public class MQClientInstance {
 
     /**
      * The container of the producer in the current client. The key is the name of producerGroup.
-     * 当前客户端中生产者的容器。关键是生产者组的名称
+     * 当前客户端中生产者的容器。key是生产者组的名称
      */
     private final ConcurrentMap<String, MQProducerInner> producerTable = new ConcurrentHashMap<>();
 
     /**
      * The container of the consumer in the current client. The key is the name of consumerGroup.
-     * 前客户端中消费者的容器。关键是消费者组的名称
+     * 当前客户端中消费者的容器。key是消费者组的名称
      */
     private final ConcurrentMap<String, MQConsumerInner> consumerTable = new ConcurrentHashMap<>();
 
@@ -263,19 +266,21 @@ public class MQClientInstance {
                         this.mQClientAPIImpl.fetchNameServerAddr();
                     }
                     // Start request-response channel
+                    // 建立客户端和服务端的连接通道
                     this.mQClientAPIImpl.start();
                     // Start various schedule tasks  启动各种计划任务
                     this.startScheduledTask();
                     // Start pull service 开启拉取消息服务
                     /**
-                     * 生产者也会到这, 不知道干嘛??
-                     * 消费者启动拉取消息
+                     * 生产者好像没啥用, 生产者也会到这, 不知道干嘛??
+                     * 消费者相关: 消费者启动拉取消息
                      * @see PullMessageService#run()
                      */
                     this.pullMessageService.start();
                     // Start rebalance service
                     /**
-                     * 开启消费者负载均衡服务
+                     * 生产者好像没啥用
+                     * 消费者相关: 开启消费者负载均衡服务
                      * @see RebalanceService#run()
                      */
                     this.rebalanceService.start();
@@ -533,6 +538,7 @@ public class MQClientInstance {
     }
 
     public boolean updateTopicRouteInfoFromNameServer(final String topic) {
+        // 从NameServer更新路由信息
         return updateTopicRouteInfoFromNameServer(topic, false, null);
     }
 
@@ -680,35 +686,49 @@ public class MQClientInstance {
         }
     }
 
+    /**
+     * 从NameServer更新路由信息
+     * @param topic             主题
+     * @param isDefault         是否使用默认的主题
+     * @param defaultMQProducer 默认消息生产者
+     * @return
+     */
     public boolean updateTopicRouteInfoFromNameServer(final String topic, boolean isDefault,
         DefaultMQProducer defaultMQProducer) {
         try {
             if (this.lockNamesrv.tryLock(LOCK_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)) {
                 try {
                     TopicRouteData topicRouteData;
+                    // 是否使用默认的主题路由信息
                     if (isDefault && defaultMQProducer != null) {
+                        // 使用默认的主题路由信息
                         topicRouteData = this.mQClientAPIImpl.getDefaultTopicRouteInfoFromNameServer(clientConfig.getMqClientApiTimeout());
                         if (topicRouteData != null) {
                             for (QueueData data : topicRouteData.getQueueDatas()) {
                                 int queueNums = Math.min(defaultMQProducer.getDefaultTopicQueueNums(), data.getReadQueueNums());
+                                // 设置可读队列数量
                                 data.setReadQueueNums(queueNums);
+                                // 设置可写队列数量
                                 data.setWriteQueueNums(queueNums);
                             }
                         }
                     } else {
+                        // 从NameServer获取主题路由信息
                         topicRouteData = this.mQClientAPIImpl.getTopicRouteInfoFromNameServer(topic, clientConfig.getMqClientApiTimeout());
                     }
                     if (topicRouteData != null) {
+                        // 从路由表中获取旧的主题路由信息
                         TopicRouteData old = this.topicRouteTable.get(topic);
+                        // 对比路由信息是否发生变化
                         boolean changed = topicRouteData.topicRouteDataChanged(old);
                         if (!changed) {
+                            // 是否需要更新路由信息
                             changed = this.isNeedUpdateTopicRouteInfo(topic);
                         } else {
                             log.info("the topic[{}] route info changed, old[{}] ,new[{}]", topic, old, topicRouteData);
                         }
 
                         if (changed) {
-
                             for (BrokerData bd : topicRouteData.getBrokerDatas()) {
                                 this.brokerAddrTable.put(bd.getBrokerName(), bd.getBrokerAddrs());
                             }

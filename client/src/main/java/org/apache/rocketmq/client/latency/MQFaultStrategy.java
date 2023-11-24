@@ -23,6 +23,10 @@ import org.apache.rocketmq.common.message.MessageQueue;
 import org.apache.rocketmq.logging.org.slf4j.Logger;
 import org.apache.rocketmq.logging.org.slf4j.LoggerFactory;
 
+/**
+ * MQ 故障策略
+ * 在Broker宕机期间，如果一次消息发送失败后，可以将该Broker暂时排除在消息队列的选择范围中，就可以避免负载均衡模式的问题
+ */
 public class MQFaultStrategy {
     private final static Logger log = LoggerFactory.getLogger(MQFaultStrategy.class);
     private final LatencyFaultTolerance<String> latencyFaultTolerance = new LatencyFaultToleranceImpl();
@@ -57,18 +61,26 @@ public class MQFaultStrategy {
     }
 
     public MessageQueue selectOneMessageQueue(final TopicPublishInfo tpInfo, final String lastBrokerName) {
-        // 是否允许发消息长时间延时, 默认为false
+        // 启用发送延迟故障转移机制, 默认为false
         if (this.sendLatencyFaultEnable) {
             try {
                 int index = tpInfo.getSendWhichQueue().incrementAndGet();
                 for (int i = 0; i < tpInfo.getMessageQueueList().size(); i++) {
                     int pos = index++ % tpInfo.getMessageQueueList().size();
                     MessageQueue mq = tpInfo.getMessageQueueList().get(pos);
+                    /**
+                     * broker故障了，但是【可能】已经恢复了。
+                     */
                     if (!StringUtils.equals(lastBrokerName, mq.getBrokerName()) && latencyFaultTolerance.isAvailable(mq.getBrokerName())) {
                         return mq;
                     }
                 }
 
+                /**
+                 * 第一条消息次已经失败了，第二条消息其实可以把BrokerA规避掉的。
+                 *
+                 * RocketMQ的故障转移机制就是在BrokerA 已经故障了，发送不了消息了的时候，给BrokerA一个故障恢复时间， 在这段时间内，发送消息就不选择发送到这台Broker上。
+                 */
                 final String notBestBroker = latencyFaultTolerance.pickOneAtLeast();
                 int writeQueueNums = tpInfo.getWriteQueueIdByBroker(notBestBroker);
                 if (writeQueueNums > 0) {
@@ -92,8 +104,13 @@ public class MQFaultStrategy {
     }
 
     public void updateFaultItem(final String brokerName, final long currentLatency, boolean isolation) {
+        // 如果开启了故障转移，才会有下面的逻辑
         if (this.sendLatencyFaultEnable) {
+            // 根据特定值，给出一个【延迟时间】
             long duration = computeNotAvailableDuration(isolation ? 30000 : currentLatency);
+            /**
+             * @see LatencyFaultToleranceImpl#updateFaultItem(String, long, long)
+             */
             this.latencyFaultTolerance.updateFaultItem(brokerName, currentLatency, duration);
         }
     }

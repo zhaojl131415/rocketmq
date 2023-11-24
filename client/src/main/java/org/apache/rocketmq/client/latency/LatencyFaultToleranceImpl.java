@@ -29,20 +29,31 @@ public class LatencyFaultToleranceImpl implements LatencyFaultTolerance<String> 
 
     private final ThreadLocalIndex randomItem = new ThreadLocalIndex();
 
+    /**
+     *
+     * @param name                  brokerName
+     * @param currentLatency        发送消息到Broker的花费时间，毫秒
+     * @param notAvailableDuration  多久不可用时间，根据【经验值】算出来的，毫秒
+     */
     @Override
     public void updateFaultItem(final String name, final long currentLatency, final long notAvailableDuration) {
+        // 1、根据BrokerName在Map中查找是否有，若不为空，说明之前就故障过
         FaultItem old = this.faultItemTable.get(name);
+        // 2、第一次故障
         if (null == old) {
             final FaultItem faultItem = new FaultItem(name);
             faultItem.setCurrentLatency(currentLatency);
+            // 3、开始Available的时间戳
             faultItem.setStartTimestamp(System.currentTimeMillis() + notAvailableDuration);
-
+            // 4、返回为空，说明里面没有值
             old = this.faultItemTable.putIfAbsent(name, faultItem);
+            // 5、双重检验锁，解决并发问题。不为空，说明被其他线程更新了值。这里需要重新设置
             if (old != null) {
                 old.setCurrentLatency(currentLatency);
                 old.setStartTimestamp(System.currentTimeMillis() + notAvailableDuration);
             }
         } else {
+            // 2、之前故障过，重新设置值
             old.setCurrentLatency(currentLatency);
             old.setStartTimestamp(System.currentTimeMillis() + notAvailableDuration);
         }
@@ -125,6 +136,7 @@ public class LatencyFaultToleranceImpl implements LatencyFaultTolerance<String> 
             return 0;
         }
 
+        // 当前时间超过延迟级别窗口
         public boolean isAvailable() {
             return (System.currentTimeMillis() - startTimestamp) >= 0;
         }

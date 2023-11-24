@@ -23,7 +23,7 @@ import org.apache.rocketmq.remoting.RPCHook;
 import org.apache.rocketmq.remoting.protocol.NamespaceUtil;
 
 /**
- * level:sss 事务消息生产者
+ * level:sss 事务消息生产者: 在默认的消息生产者上支持事务消息机制.
  */
 public class TransactionMQProducer extends DefaultMQProducer {
     private TransactionCheckListener transactionCheckListener;

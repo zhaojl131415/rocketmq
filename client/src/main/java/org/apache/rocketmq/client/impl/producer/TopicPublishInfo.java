@@ -73,8 +73,9 @@ public class TopicPublishInfo {
      * @return
      */
     public MessageQueue selectOneMessageQueue(final String lastBrokerName) {
-        // 如果最近一次的brokerName为空,
+        // 第一次发送消息，lastBrokerName为空
         if (lastBrokerName == null) {
+            // 根据自增id 和 队列数 取模, 轮询选择消息队列
             return selectOneMessageQueue();
         } else {
             // 其实就是根据上一个broker, 轮询获取下一个
@@ -83,10 +84,12 @@ public class TopicPublishInfo {
                 int index = this.sendWhichQueue.incrementAndGet();
                 int pos = index % this.messageQueueList.size();
                 MessageQueue mq = this.messageQueueList.get(pos);
+                // 如果方法走到这里, 那么表示上一次向这个broker发送消息是失败的, 可能broker是有问题的, 重试进行消息队列选择时, 规避上次故障的Broker，否则还是很有可能再次失败
                 if (!mq.getBrokerName().equals(lastBrokerName)) {
                     return mq;
                 }
             }
+            // 根据自增id 和 队列数 取模, 轮询选择消息队列
             return selectOneMessageQueue();
         }
     }

@@ -241,6 +241,7 @@ public class DefaultMQPushConsumer extends ClientConfig implements MQPushConsume
 
     /**
      * Batch pull size
+     * 批量拉取消息的条数
      */
     private int pullBatchSize = 32;
 
@@ -831,6 +832,7 @@ public class DefaultMQPushConsumer extends ClientConfig implements MQPushConsume
     }
 
     /**
+     * level:b 通过消息选择器订阅主题：SQL
      * Subscribe a topic by message selector.
      *
      * @param topic topic to consume.
