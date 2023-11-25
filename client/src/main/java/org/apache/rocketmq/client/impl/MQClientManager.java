@@ -57,6 +57,7 @@ public class MQClientManager {
      * @return
      */
     public MQClientInstance getOrCreateMQClientInstance(final ClientConfig clientConfig, RPCHook rpcHook) {
+        // 构建clientId: client的IP@DEFAULT
         String clientId = clientConfig.buildMQClientId();
         // 从缓存的Map中获取MQ客户端实例
         MQClientInstance instance = this.factoryTable.get(clientId);

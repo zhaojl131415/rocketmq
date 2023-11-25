@@ -40,6 +40,12 @@ import org.apache.rocketmq.logging.org.slf4j.LoggerFactory;
  * Local storage implementation
  */
 public class LocalFileOffsetStore implements OffsetStore {
+
+    /**
+     * 要定制本地存储的目录，只需要设定rocketmq.client.localOffsetStoreDir系统属性即可。
+     * 而这个系统属性还没有支持前端配置，所以，修改的方式，只能是在应用启动时手动进行指定。
+     * 例如 System.setProperty(“rocketmq.client.localOffsetStoreDir”,“D:/.rockemtq_offset”)。
+     */
     public final static String LOCAL_OFFSET_STORE_DIR = System.getProperty(
         "rocketmq.client.localOffsetStoreDir",
         System.getProperty("user.home") + File.separator + ".rocketmq_offsets");
@@ -53,7 +59,16 @@ public class LocalFileOffsetStore implements OffsetStore {
     public LocalFileOffsetStore(MQClientInstance mQClientFactory, String groupName) {
         this.mQClientFactory = mQClientFactory;
         this.groupName = groupName;
+        /**
+         * 默认会在消费者程序所在的机器本地的${user.home}/rocketmq_offset/${clientIp}@DEFAULT/${group}/offset.json文件中保存消费进度
+         *
+         * 其中$部分问变量。
+         * ${user.home}为系统所属用户目录。在windows下默认是C:\Users\${用户名}。
+         * ${clientIp}是消费者端的IP地址。
+         * ${group}是消费者指定的所属消费者组。
+         */
         this.storePath = LOCAL_OFFSET_STORE_DIR + File.separator +
+            // clientIp @DEFAULT
             this.mQClientFactory.getClientId() + File.separator +
             this.groupName + File.separator +
             "offsets.json";
@@ -147,6 +162,7 @@ public class LocalFileOffsetStore implements OffsetStore {
             try {
                 MixAll.string2File(jsonString, this.storePath);
             } catch (IOException e) {
+                // 如果offsets.json文件写入失败，RocketMQ只是记录一条log日志就没事了，甚至连异常都没有往外抛。这意味着如果广播消息本地的offsets.json进度没有更新，RocketMQ不会做任何的补救措施。
                 log.error("persistAll consumer offset Exception, " + this.storePath, e);
             }
         }

@@ -368,6 +368,7 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
     }
 
     /**
+     * 与 {@link #send(Message)} 相同, 另外指定的发送超时时间
      * Same to {@link #send(Message)} with send timeout specified in addition.
      *
      * @param msg Message to send.
@@ -387,10 +388,13 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
     }
 
     /**
+     * 异步向broker发送消息。
      * Send message to broker asynchronously. </p>
      *
+     * 此方法立即返回。发送完成后， sendCallback 将被执行。
      * This method returns immediately. On sending completion, <code>sendCallback</code> will be executed. </p>
      *
+     * 与 send(Message)类似，内部实现可能会在声称发送失败之前重试多达 retryTimesWhenSendAsyncFailed 几次，这可能会导致消息重复，而应用程序开发人员是解决此潜在问题的人。
      * Similar to {@link #send(Message)}, internal implementation would potentially retry up to {@link
      * #retryTimesWhenSendAsyncFailed} times before claiming sending failure, which may yield message duplication and
      * application developers are the one to resolve this potential issue.
@@ -409,6 +413,7 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
     }
 
     /**
+     * 与 {@link #send(Message, SendCallback)} 相同, 另外指定的发送超时时间
      * Same to {@link #send(Message, SendCallback)} with send timeout specified in addition.
      *
      * @param msg message to send.
@@ -426,6 +431,7 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
     }
 
     /**
+     * 与 UDP 类似，此方法不会在返回之前等待broker的确认。显然，它具有最大的吞吐量，但可能会丢失消息。
      * Similar to <a href="https://en.wikipedia.org/wiki/User_Datagram_Protocol">UDP</a>, this method won't wait for
      * acknowledgement from broker before return. Obviously, it has maximums throughput yet potentials of message loss.
      *
@@ -441,6 +447,7 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
     }
 
     /**
+     * 与 {@link #send(Message)} 相同, 另外指定的目标消息队列。
      * Same to {@link #send(Message)} with target message queue specified in addition.
      *
      * @param msg Message to send.

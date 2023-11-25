@@ -81,6 +81,7 @@ public class ClientConfig {
      */
     protected boolean enableStreamRequestType = false;
 
+    // 构建clientId: clientIP@DEFAULT
     public String buildMQClientId() {
         StringBuilder sb = new StringBuilder();
         sb.append(this.getClientIP());

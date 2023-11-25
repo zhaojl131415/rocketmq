@@ -42,6 +42,7 @@ public class AllocateMessageQueueByMachineRoom extends AbstractAllocateMessageQu
         }
         List<MessageQueue> premqAll = new ArrayList<>();
         for (MessageQueue mq : mqAll) {
+            // 根据机房和broker的名字建立对应关系
             String[] temp = mq.getBrokerName().split("@");
             if (temp.length == 2 && consumeridcs.contains(temp[0])) {
                 premqAll.add(mq);

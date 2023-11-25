@@ -249,6 +249,7 @@ public abstract class RebalanceImpl {
                     if (!clientRebalance(topic) && tryQueryAssignment(topic)) {
                         balanced = this.getRebalanceResultFromBroker(topic, isOrder);
                     } else {
+                        // 根据topic负载均衡
                         balanced = this.rebalanceByTopic(topic, isOrder);
                     }
                 } catch (Throwable e) {
@@ -346,15 +347,20 @@ public abstract class RebalanceImpl {
                     Collections.sort(mqAll);
                     // 所有的消费者实例排序
                     Collections.sort(cidAll);
-
+                    // 分配消息队列策略
                     AllocateMessageQueueStrategy strategy = this.allocateMessageQueueStrategy;
 
                     List<MessageQueue> allocateResult = null;
                     try {
                         /**
                          * 按策略分配
+                         * 默认: 平均分配
                          * @see AllocateMessageQueueAveragely#allocate(String, String, List, List)
+                         * 环形平均分配
                          * @see AllocateMessageQueueAveragelyByCircle#allocate(String, String, List, List)
+                         *
+                         * 可以出现一个消费者消费多个mq, 但是不能一个mq被多个消费者消费.
+                         * 因为对于mq,消费者组需要记录消费的offset, 如果有两个消费者提交消费的offset就乱了
                          */
                         allocateResult = strategy.allocate(
                             this.consumerGroup,

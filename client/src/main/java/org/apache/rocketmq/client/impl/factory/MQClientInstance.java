@@ -92,6 +92,7 @@ public class MQClientInstance {
     private final static long LOCK_TIMEOUT_MILLIS = 3000;
     private final static Logger log = LoggerFactory.getLogger(MQClientInstance.class);
     private final ClientConfig clientConfig;
+    // 客户端Id: 构造方法指定
     private final String clientId;
     private final long bootTimestamp = System.currentTimeMillis();
 
@@ -142,6 +143,17 @@ public class MQClientInstance {
         this(clientConfig, instanceIndex, clientId, null);
     }
 
+    /**
+     * MQ客户端实例
+     *
+     * 调用位置:
+     * @see MQClientManager#getOrCreateMQClientInstance(ClientConfig, RPCHook)
+     *
+     * @param clientConfig
+     * @param instanceIndex
+     * @param clientId
+     * @param rpcHook
+     */
     public MQClientInstance(ClientConfig clientConfig, int instanceIndex, String clientId, RPCHook rpcHook) {
         this.clientConfig = clientConfig;
         this.nettyClientConfig = new NettyClientConfig();

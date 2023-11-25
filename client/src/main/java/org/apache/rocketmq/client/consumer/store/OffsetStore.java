@@ -46,6 +46,11 @@ public interface OffsetStore {
 
     /**
      * Persist all offsets,may be in local storage or remote name server
+     * 持久化所有偏移量，根据集群和广播模式, 可能在本地存储或远程名称服务器中
+     * 广播模式: 本地存储
+     * @see LocalFileOffsetStore#persistAll(Set)
+     * 集群模式: Broker远端存储
+     * @see RemoteBrokerOffsetStore#persistAll(Set)
      */
     void persistAll(final Set<MessageQueue> mqs);
 

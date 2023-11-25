@@ -356,9 +356,11 @@ public class DefaultLitePullConsumerImpl implements MQConsumerInner {
         } else {
             switch (this.defaultLitePullConsumer.getMessageModel()) {
                 case BROADCASTING:
+                    // 在消费者本地存储消费进度Offset
                     this.offsetStore = new LocalFileOffsetStore(this.mQClientFactory, this.defaultLitePullConsumer.getConsumerGroup());
                     break;
                 case CLUSTERING:
+                    // 在Broker远端存储消费进度Offset
                     this.offsetStore = new RemoteBrokerOffsetStore(this.mQClientFactory, this.defaultLitePullConsumer.getConsumerGroup());
                     break;
                 default:

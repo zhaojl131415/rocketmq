@@ -460,7 +460,7 @@ public class ConsumeMessageOrderlyService implements ConsumeMessageService {
             }
             // 顺序消息锁定队列
             final Object objLock = messageQueueLock.fetchLockObject(this.messageQueue);
-            // 锁定队列, 锁释放才能消费队列中的下一个消息
+            // 锁定队列, 锁释放才能消费队列中的下一个消息, 防止并发: 实现顺序消息消费的逻辑
             synchronized (objLock) {
                 if (MessageModel.BROADCASTING.equals(ConsumeMessageOrderlyService.this.defaultMQPushConsumerImpl.messageModel())
                     || this.processQueue.isLocked() && !this.processQueue.isLockExpired()) {
