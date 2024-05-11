@@ -2072,9 +2072,13 @@ public class AdminBrokerProcessor implements NettyRequestProcessor {
         return response;
     }
 
+    // 删除过期CommitLog
     public RemotingCommand deleteExpiredCommitLog() {
         LOGGER.warn("invoke deleteExpiredCommitLog start.");
         final RemotingCommand response = RemotingCommand.createResponseCommand(null);
+        /**
+         * @see DefaultMessageStore#executeDeleteFilesManually()
+         */
         brokerController.getMessageStore().executeDeleteFilesManually();
         LOGGER.warn("invoke deleteExpiredCommitLog end.");
         response.setCode(ResponseCode.SUCCESS);

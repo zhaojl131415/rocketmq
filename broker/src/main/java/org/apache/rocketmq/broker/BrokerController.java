@@ -1536,6 +1536,7 @@ public class BrokerController {
         if (this.messageStore != null) {
             /**
              * @see DefaultMessageStore#start()
+             * 默认消息存储实现类：封装了一些消息文件的操作
              */
             this.messageStore.start();
         }

@@ -96,16 +96,24 @@ public class IndexService {
         return (long) indexFileList.get(0).getFileSize() * indexFileList.size();
     }
 
+    /**
+     * 通过commitLog的最小偏移量来删除的。只要一个索引中的最大偏移量小于commitLog的最小偏移量，说明这个索引是不需要的, 就可以删除
+     * @param offset
+     */
     public void deleteExpiredFile(long offset) {
         Object[] files = null;
         try {
+            // 获取读锁
             this.readWriteLock.readLock().lock();
+            // 如果索引文件列表为空，则直接返回
             if (this.indexFileList.isEmpty()) {
                 return;
             }
-
+            // 获取第一个索引文件的结束物理偏移量
             long endPhyOffset = this.indexFileList.get(0).getEndPhyOffset();
+            // 如果第一个索引文件的结束物理偏移量小于commitLog的最小偏移量，说明索引无效需要删除
             if (endPhyOffset < offset) {
+                // 将索引文件列表转换为数组
                 files = this.indexFileList.toArray();
             }
         } catch (Exception e) {
@@ -118,13 +126,14 @@ public class IndexService {
             List<IndexFile> fileList = new ArrayList<>();
             for (int i = 0; i < (files.length - 1); i++) {
                 IndexFile f = (IndexFile) files[i];
+                // 如果文件的结束物理偏移量小于commitLog的最小偏移量
                 if (f.getEndPhyOffset() < offset) {
                     fileList.add(f);
                 } else {
                     break;
                 }
             }
-
+            // 调用删除过期文件的方法
             this.deleteExpiredFile(fileList);
         }
     }

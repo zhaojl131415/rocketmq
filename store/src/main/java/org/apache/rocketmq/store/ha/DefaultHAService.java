@@ -123,9 +123,15 @@ public class DefaultHAService implements HAService {
 
     @Override
     public void start() throws Exception {
+        // master端: 用来维护主从之间的TCP连接
         this.acceptSocketService.beginAccept();
+        /**
+         * @see AcceptSocketService#run()
+         */
         this.acceptSocketService.start();
+        // master端: 进行主从消息同步的
         this.groupTransferService.start();
+
         this.haConnectionStateNotificationService.start();
         if (haClient != null) {
             this.haClient.start();
@@ -337,6 +343,7 @@ public class DefaultHAService implements HAService {
 
             while (!this.isStopped()) {
                 try {
+                    // NIO: 
                     this.selector.select(1000);
                     Set<SelectionKey> selected = this.selector.selectedKeys();
 

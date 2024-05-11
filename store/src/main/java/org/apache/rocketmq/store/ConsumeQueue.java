@@ -693,6 +693,9 @@ public class ConsumeQueue implements ConsumeQueueInterface, FileQueueLifeCycle {
                         topic, queueId, request.getCommitLogOffset());
                 }
             }
+            /**
+             * level:b 实际写入ConsumeQueue文件
+             */
             boolean result = this.putMessagePositionInfo(request.getCommitLogOffset(),
                 request.getMsgSize(), tagsCode, request.getConsumeQueueOffset());
             if (result) {
@@ -925,6 +928,7 @@ public class ConsumeQueue implements ConsumeQueueInterface, FileQueueLifeCycle {
                 }
             }
             this.maxPhysicOffset = offset + size;
+            // 顺序写
             return mappedFile.appendMessage(this.byteBufferIndex.array());
         }
         return false;

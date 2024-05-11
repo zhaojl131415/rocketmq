@@ -309,6 +309,7 @@ public class MappedFileQueue implements Swappable {
         }
 
         if (createOffset != -1 && needCreate) {
+            // 创建一个新的文件
             return tryCreateMappedFile(createOffset);
         }
 
@@ -464,13 +465,16 @@ public class MappedFileQueue implements Swappable {
         final long intervalForcibly,
         final boolean cleanImmediately,
         final int deleteFileBatchMax) {
+        // 获取映射文件列表 commitLog文件可能随时有写入，copy一份不影响写入
         Object[] mfs = this.copyMappedFiles(0);
 
         if (null == mfs)
             return 0;
 
         int mfsLength = mfs.length - 1;
+        // 删除的文件数量
         int deleteCount = 0;
+        // 需要删除的 MappedFile
         List<MappedFile> files = new ArrayList<>();
         int skipFileNum = 0;
         if (null != mfs) {
@@ -479,10 +483,16 @@ public class MappedFileQueue implements Swappable {
             for (int i = 0; i < mfsLength; i++) {
                 MappedFile mappedFile = (MappedFile) mfs[i];
                 long liveMaxTimestamp = mappedFile.getLastModifiedTimestamp() + expiredTime;
+                // 当前时间大于等于 liveMaxTimestamp 或者 cleanImmediately 为 true(手动清理或磁盘空间达到85%)，表示文件过期或需要立即清理
                 if (System.currentTimeMillis() >= liveMaxTimestamp || cleanImmediately) {
                     if (skipFileNum > 0) {
                         log.info("Delete CommitLog {} but skip {} files", mappedFile.getFileName(), skipFileNum);
                     }
+                    //
+                    /**
+                     * 真正的删除逻辑
+                     * @see DefaultMappedFile#destroy(long)
+                     */
                     if (mappedFile.destroy(intervalForcibly)) {
                         files.add(mappedFile);
                         deleteCount++;
@@ -507,9 +517,9 @@ public class MappedFileQueue implements Swappable {
                 }
             }
         }
-
+        //从文件映射队列中删除对应的文件映射
         deleteExpiredFile(files);
-
+        //返回删除的文件个数
         return deleteCount;
     }
 
@@ -619,6 +629,7 @@ public class MappedFileQueue implements Swappable {
         MappedFile mappedFile = this.findMappedFileByOffset(this.flushedWhere, this.flushedWhere == 0);
         if (mappedFile != null) {
             long tmpTimeStamp = mappedFile.getStoreTimestamp();
+            // 执行刷盘
             int offset = mappedFile.flush(flushLeastPages);
             long where = mappedFile.getFileFromOffset() + offset;
             result = where == this.flushedWhere;
@@ -635,6 +646,7 @@ public class MappedFileQueue implements Swappable {
         boolean result = true;
         MappedFile mappedFile = this.findMappedFileByOffset(this.committedWhere, this.committedWhere == 0);
         if (mappedFile != null) {
+            // 这里只是将内容写入到PageCache, 交由操作系统在合适的时间自行完成写入磁盘.
             int offset = mappedFile.commit(commitLeastPages);
             long where = mappedFile.getFileFromOffset() + offset;
             result = where == this.committedWhere;

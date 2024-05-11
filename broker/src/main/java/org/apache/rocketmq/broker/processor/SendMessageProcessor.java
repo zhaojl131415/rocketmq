@@ -106,10 +106,12 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
                 }
 
                 RemotingCommand response;
+                // 批量消息
                 if (requestHeader.isBatch()) {
                     response = this.sendBatchMessage(ctx, request, sendMessageContext, requestHeader, mappingContext,
                         (ctx1, response1) -> executeSendMessageHookAfter(response1, ctx1));
                 } else {
+                    // 单条消息
                     response = this.sendMessage(ctx, request, sendMessageContext, requestHeader, mappingContext,
                         (ctx12, response12) -> executeSendMessageHookAfter(response12, ctx12));
                 }

@@ -48,6 +48,7 @@ import org.apache.rocketmq.store.util.PerfCounter;
 
 /**
  * This class defines contracting interfaces to implement, allowing third-party vendor to use customized message store.
+ * 该类定义了要实现的契约接口，允许第三方供应商使用定制的消息存储。
  */
 public interface MessageStore {
 
@@ -381,6 +382,7 @@ public interface MessageStore {
 
     /**
      * Execute file deletion manually.
+     * 手动删除文件
      */
     void executeDeleteFilesManually();
 

@@ -46,13 +46,7 @@ import org.apache.rocketmq.common.message.MessageExtBrokerInner;
 import org.apache.rocketmq.common.utils.NetworkUtil;
 import org.apache.rocketmq.logging.org.slf4j.Logger;
 import org.apache.rocketmq.logging.org.slf4j.LoggerFactory;
-import org.apache.rocketmq.store.AppendMessageCallback;
-import org.apache.rocketmq.store.AppendMessageResult;
-import org.apache.rocketmq.store.AppendMessageStatus;
-import org.apache.rocketmq.store.CompactionAppendMsgCallback;
-import org.apache.rocketmq.store.PutMessageContext;
-import org.apache.rocketmq.store.SelectMappedBufferResult;
-import org.apache.rocketmq.store.TransientStorePool;
+import org.apache.rocketmq.store.*;
 import org.apache.rocketmq.store.config.FlushDiskType;
 import org.apache.rocketmq.store.util.LibC;
 import sun.misc.Unsafe;
@@ -287,6 +281,10 @@ public class DefaultMappedFile extends AbstractMappedFile {
             AppendMessageResult result;
             if (messageExt instanceof MessageExtBatch && !((MessageExtBatch) messageExt).isInnerBatch()) {
                 // traditional batch message
+                /**
+                 * 构建好需要写入的内容
+                 * @see CommitLog.DefaultAppendMessageCallback#doAppend(long, ByteBuffer, int, MessageExtBatch, PutMessageContext)
+                 */
                 result = cb.doAppend(this.getFileFromOffset(), byteBuffer, this.fileSize - currentPos,
                     (MessageExtBatch) messageExt, putMessageContext);
             } else if (messageExt instanceof MessageExtBrokerInner) {
@@ -555,15 +553,18 @@ public class DefaultMappedFile extends AbstractMappedFile {
 
     @Override
     public boolean destroy(final long intervalForcibly) {
+        // 释放内存
         this.shutdown(intervalForcibly);
 
         if (this.isCleanupOver()) {
             try {
                 long lastModified = getLastModifiedTimestamp();
+                // 关闭文件通道
                 this.fileChannel.close();
                 log.info("close file channel " + this.fileName + " OK");
 
                 long beginTime = System.currentTimeMillis();
+                // 删除文件
                 boolean result = this.file.delete();
                 log.info("delete file[REF:" + this.getRefCount() + "] " + this.fileName
                     + (result ? " OK, " : " Failed, ") + "W:" + this.getWrotePosition() + " M:"

@@ -106,6 +106,9 @@ public abstract class ServiceThread implements Runnable {
 
     protected void waitForRunning(long interval) {
         if (hasNotified.compareAndSet(true, false)) {
+            /**
+             * @see org.apache.rocketmq.store.CommitLog.GroupCommitService#onWaitEnd()
+             */
             this.onWaitEnd();
             return;
         }

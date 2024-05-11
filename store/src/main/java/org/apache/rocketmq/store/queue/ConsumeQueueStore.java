@@ -90,6 +90,9 @@ public class ConsumeQueueStore {
      * @param request dispatch request
      */
     public void putMessagePositionInfoWrapper(ConsumeQueueInterface consumeQueue, DispatchRequest request) {
+        /**
+         * @see ConsumeQueue#putMessagePositionInfoWrapper(DispatchRequest)
+         */
         consumeQueue.putMessagePositionInfoWrapper(request);
     }
 
